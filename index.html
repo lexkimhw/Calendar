@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (컬러 인쇄 & 2월 최종 마감판)</title>
+    <title>학원 연간 클래스 스케줄러 (레이아웃 및 문구 최종 수정판)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .sat { color: #2563eb !important; } 
         .sun { color: #dc2626 !important; } 
         
-        /* [핵심 색상 정의] 화면과 인쇄 시 동일하게 적용 */
+        /* [컬러 가이드 구성] */
         .session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }  
         .session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6 !important; } 
         
@@ -17,7 +17,7 @@
         .bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; } 
         .bg-prep { background-color: #a1a1aa !important; color: white !important; } 
 
-        /* 🖨️ 인쇄 스타일 정의 (화면 컬러 그대로 유지) */
+        /* 🖨️ 인쇄 세팅 (화면 컬러 완벽 유지 + 레이아웃 정돈) */
         @media print {
             .no-print { display: none !important; }
             body { 
@@ -31,7 +31,6 @@
             .print-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
             .print-card { border: 1px solid #e5e7eb !important; page-break-inside: avoid; }
             
-            /* 인쇄 시에도 배경색과 글자색 스타일을 완벽하게 유지하도록 강제 설정 */
             .session-odd, .session-even, .bg-legal, .bg-academy, .bg-prep {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -42,14 +41,14 @@
 <body class="bg-gray-50 p-4">
 
     <div class="no-print max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 설정 (컬러 인쇄 최적화 버전)</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 관리자 모드</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작)</label>
                 <input type="number" id="baseYear" class="w-full border p-2 rounded font-bold" value="2026" onchange="calculateSchedule()">
             </div>
             <div class="md:col-span-2">
-                <label class="block text-xs font-bold mb-1">수업 요일 지정 (1개 선택 시 4회, 2개 이상 선택 시 8회 자동 정산)</label>
+                <label class="block text-xs font-bold mb-1">수업 요일 지정 (1개 선택 시 4회, 2개 이상 선택 시 8회 자동 분할)</label>
                 <div class="flex gap-4 pt-2">
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="1" id="chk_mon" onchange="calculateSchedule()"> 월</label>
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="2" id="chk_tue" checked onchange="calculateSchedule()"> 화</label>
@@ -80,17 +79,23 @@
     </div>
 
     <div id="printArea" class="max-w-7xl mx-auto bg-white p-2">
-        <h1 id="mainTitle" class="text-4xl font-black text-center mb-4 tracking-tight">2026 CLASS SCHEDULE</h1>
+        <h1 id="mainTitle" class="text-4xl font-black text-center mb-6 tracking-tight">2026 CLASS SCHEDULE</h1>
 
-        <div class="flex justify-between items-end mb-4 border-b-2 border-black pb-2">
-            <div>
-                <div id="displayDays" class="text-2xl font-bold">수업 요일 : 화.목 ( Tue/Thu )</div>
-                <div id="sessionNotice" class="text-xs font-bold text-green-700 mt-1">** 한달 수강료 기준 연속 매칭 처리됩니다.</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-b-2 border-black pb-3">
+            <div class="space-y-1">
+                <div id="displayDays" class="text-2xl font-black text-gray-900">수업 요일 : 화.목(Tue/Thu)</div>
+                <div id="sessionNotice" class="text-xs font-bold text-green-700">** 한달 수강료 기준 연속 매칭 처리됩니다.</div>
             </div>
-            <div class="text-right text-xs font-bold space-y-1 text-gray-800 border p-2 rounded bg-gray-50 print:bg-white">
-                <div><span class="inline-block w-5 h-3.5 bg-legal border border-gray-500 align-middle mr-1.5 rounded-sm"></span> 법정 공휴일</div>
-                <div><span class="inline-block w-5 h-3.5 bg-academy border border-yellow-600 align-middle mr-1.5 rounded-sm"></span> 학원 지정 휴일</div>
-                <div><span class="inline-block w-5 h-3.5 bg-prep border border-gray-500 align-middle mr-1.5 rounded-sm"></span> Prep Day</div>
+            
+            <div class="flex flex-col space-y-2 justify-self-start md:justify-self-end w-full max-w-md">
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-gray-800">
+                    <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-legal border border-gray-500 mr-1.5 rounded-sm"></span> 법정 공휴일</div>
+                    <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-academy border border-yellow-600 mr-1.5 rounded-sm"></span> 학원 지정 휴일</div>
+                    <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-prep border border-gray-500 mr-1.5 rounded-sm"></span> Prep Day</div>
+                </div>
+                <div class="text-xs font-extrabold text-red-600 tracking-tight">
+                    ※ 법정 공휴일, 학원 지정 휴일, Prep Day 모두 학원 수업 없습니다.
+                </div>
             </div>
         </div>
 
@@ -174,7 +179,7 @@
             };
             try {
                 await fetch(DB_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                alert('💾 설정 데이터가 실시간 데이터베이스에 연동 저장되었습니다.');
+                alert('✅ 학원 맞춤형 스케줄 설정이 실시간 DB에 안전하게 저장되었습니다.');
             } catch(e) { alert('❌ 저장 실패'); }
         }
 
@@ -229,11 +234,17 @@
             document.getElementById('mainTitle').innerText = `${baseYear} CLASS SCHEDULE`;
 
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
+            
+            // ⚠️ [수업 요일 출력 변경 로직 고도화]: 원장님 요청에 따른 요일 매칭 포맷 보정
             const weekNames = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금'};
-            document.getElementById('displayDays').innerText = `수업 요일 : ${selectedDays.map(d=>weekNames[d]).join('.')} 반`;
+            const engNames = {1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri'};
+            
+            const korPart = selectedDays.map(d => weekNames[d]).join('.'); // 예: 화.목
+            const engPart = selectedDays.map(d => engNames[d]).join('/');  // 예: Tue/Thu
+            document.getElementById('displayDays').innerText = `수업 요일 : ${korPart}(${engPart})`;
 
             const sessionCutCount = (selectedDays.length === 1) ? 4 : 8;
-            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 연속 ${sessionCutCount}회 단위 세션 로테이션)`;
+            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 연속 ${sessionCutCount}회 단위 세션 회차 정산)`;
 
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
@@ -253,17 +264,11 @@
                 }
             }
 
-            // ⚠️ 2월 몰아주기 전용 세션 빌더 로직 보정
-            let sessions = []; 
-            let currentSession = [];
-            
+            // 2월 마지막 달 몰아주기 연산 빌더
+            let sessions = []; let currentSession = [];
             globalClassDays.forEach((day, index) => {
                 currentSession.push(day);
-                
-                // 내년 2월(즉, 학기 일정의 최종 월)에 포함된 수업일이 감지되기 시작하면, 
-                // 더 이상 4회/8회로 쪼개지 않고 마지막 세션에 끝까지 밀어 넣어 통합시킵니다.
                 const isFinalMonth = (day.year === baseYear + 1 && day.month === 2);
-                
                 if (!isFinalMonth && currentSession.length === sessionCutCount && index < globalClassDays.length - 1) {
                     sessions.push(currentSession);
                     currentSession = [];
@@ -284,7 +289,6 @@
                 session.forEach(day => {
                     dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
                     
-                    // 각 월별 대표 노출 문구 셋업
                     if (!monthBannerInfo[day.month]) {
                         monthBannerInfo[day.month] = {
                             text: `${day.month}월 기간: ` + infoText,
@@ -292,7 +296,6 @@
                             count: session.length
                         };
                     }
-                    // 최종 2월은 몰아준 전체 개수가 제대로 기입되도록 오버라이딩
                     if (day.month === 2) {
                         monthBannerInfo[2] = {
                             text: `2월 기간: ` + infoText,
@@ -303,7 +306,6 @@
                 });
             });
 
-            // 2월 최종 잔여 횟수 실시간 산출 및 푸터 업데이트
             const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
             document.getElementById('alertFooter').innerText = `2월(${febFinalCount}회) 수강료 횟수가 다르오니 확인 부탁 드립니다. (매월 20일 수강료 안내)`;
 
