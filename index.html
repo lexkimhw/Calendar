@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (독립 인쇄 오류 수정판)</title>
+    <title>학원 연간 클래스 스케줄러 (A4 1장 출력 및 성적표 문구 추가판)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .sat { color: #2563eb !important; } 
@@ -20,7 +20,7 @@
 <body class="bg-gray-50 p-4">
 
     <div class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 (독립 팝업 인쇄 모듈)</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 (A4 1장 최적화 버전)</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작)</label>
@@ -316,46 +316,69 @@
 
                 html += `</tr></tbody></table></div>`;
 
+                // ⚠️ [핵심 추가]: 원장님 요청 8월 및 2월 Progress Report 알림 문구 조건부 주입 로직
+                let reportNoticeHtml = "";
+                if (month === 8) {
+                    reportNoticeHtml = '<div class="mt-1 p-1 bg-red-50 text-[8.5px] font-extrabold text-red-600 leading-tight border border-red-200 rounded-sm text-center">' +
+                                       'Progress Report: 9월중 발송<br>(8월31일까지 재원생/신규생은 2달이상 수강한 학생 기준)</div>';
+                } else if (month === 2) {
+                    reportNoticeHtml = '<div class="mt-1 p-1 bg-red-50 text-[8.5px] font-extrabold text-red-600 leading-tight border border-red-200 rounded-sm text-center">' +
+                                       'Progress Report: 3월중 발송<br>(2월말까지 재원생/신규생은 2달이상 수강한 학생 기준)</div>';
+                }
+
                 let infoArr = [];
                 if(legal.textList[month]) infoArr.push(...legal.textList[month]);
                 if(academy.textList[month]) infoArr.push(...academy.textList[month]);
                 if(prep.textList[month]) infoArr.push(...prep.textList[month]);
 
                 html += `
-                        <div class="mt-3 pt-1.5 text-[9.5px] font-bold text-gray-600 border-t border-dashed min-h-[35px]">
-                            ${infoArr.map(t => `<div class="leading-tight text-gray-700">• ${t}</div>`).join('')}
+                        <div>
+                            ${reportNoticeHtml}
+                            <div class="mt-2 pt-1 text-[9.5px] font-bold text-gray-600 border-t border-dashed min-h-[30px]">
+                                ${infoArr.map(t => `<div class="leading-tight text-gray-700">• ${t}</div>`).join('')}
+                            </div>
                         </div>
                     </div>`;
                 grid.innerHTML += html;
             }
         }
 
-        // ⚠️ [안전한 문자열 합산 결합 방식으로 전면 교정]
+        // 🖨️ [A4 용지 딱 1장(단면) 규격 압축 팝업 인쇄 엔진]
         function printScheduler() {
             const htmlContent = document.getElementById("printArea").innerHTML;
-            const printWindow = window.open("", "_blank", "width=1150,height=850");
+            const printWindow = window.open("", "_blank", "width=1200,height=900");
             
             let template = '<!DOCTYPE html><html><head><title>CLASS SCHEDULE PRINT</title>' +
                 '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>' +
                 '<style>' +
-                'body { background: white; font-family: sans-serif; padding: 10px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+                /* 전체 요소 여백 최소화 및 높이 맞춤형 압축 */
+                'body { background: white; font-family: sans-serif; padding: 2mm; margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; overflow: hidden; }' +
+                'h1 { margin-bottom: 8px !important; font-size: 1.8rem !important; line-height: 1 !important; }' +
                 '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
                 '.session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }' +
                 '.session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6 !important; }' +
                 '.bg-legal { background-color: #71717a !important; color: white !important; }' +
                 '.bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; }' +
                 '.bg-prep { background-color: #a1a1aa !important; color: white !important; }' +
-                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }' +
-                '.print-card-layout { border: 1px solid #e5e7eb !important; page-break-inside: avoid; }' +
-                '@media print { @page { size: A4 portrait; margin: 6mm 8mm; } body { padding: 0; margin: 0; } }' +
+                
+                /* ⚠️ A4 단면 패킹 핵심: 축소형 그리드 및 패딩 강제 적용 */
+                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px !important; }' +
+                '.print-card-layout { border: 1px solid #d1d5db !important; padding: 4px !important; border-radius: 4px !important; page-break-inside: avoid; background-color: white !important; }' +
+                'table { font-size: 8.5px !important; }' +
+                'td div { height: 16px !important; width: 16px !important; font-size: 8.5px !important; line-height: 16px !important; margin: auto; }' +
+                
+                '@media print { ' +
+                '  @page { size: A4 portrait; margin: 4mm 5mm 4mm 5mm; } ' +
+                '  body { padding: 0; margin: 0; }' +
+                '}' +
                 '</style></head><body>' +
-                '<div class="max-w-7xl mx-auto">' + htmlContent + '</div>' +
+                '<div class="w-full">' + htmlContent + '</div>' +
                 '<script>' +
                 'const grid = document.querySelector("#calendarGrid");' +
                 'if(grid) {' +
                 '  grid.className = "print-grid-layout";' +
                 '  const cards = grid.querySelectorAll(".print-card");' +
-                '  cards.forEach(c => c.className += " print-card-layout");' +
+                '  cards.forEach(c => c.className = "print-card-layout flex flex-col justify-between");' +
                 '}' +
                 'setTimeout(function(){ window.print(); window.close(); }, 500);' +
                 '<\/script></body></html>';
