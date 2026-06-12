@@ -3,64 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (주1회/2회 및 흑백 인쇄 대응형)</title>
+    <title>학원 연간 클래스 스케줄러 (컬러 인쇄 & 2월 최종 마감판)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .sat { color: #2563eb !important; } 
         .sun { color: #dc2626 !important; } 
         
-        /* [컬러 화면] 8회/4회차 세션별 교차 색상 */
-        .session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac; }  
-        .session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6; } 
+        /* [핵심 색상 정의] 화면과 인쇄 시 동일하게 적용 */
+        .session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }  
+        .session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6 !important; } 
         
         .bg-legal { background-color: #71717a !important; color: white !important; } 
-        .bg-academy { background-color: #fde047 !important; color: black !important; } 
+        .bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; } 
         .bg-prep { background-color: #a1a1aa !important; color: white !important; } 
 
-        /* 🖨️ [흑백 인쇄용 강제 오버라이드 고도화] */
+        /* 🖨️ 인쇄 스타일 정의 (화면 컬러 그대로 유지) */
         @media print {
             .no-print { display: none !important; }
-            body { background: white; padding: 0; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            @page { size: A4 portrait; margin: 8mm 10mm; }
+            body { 
+                background: white; 
+                padding: 0; 
+                margin: 0; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
+            @page { size: A4 portrait; margin: 6mm 8mm; }
             .print-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
-            .print-card { border: 1px solid #666 !important; page-break-inside: avoid; }
+            .print-card { border: 1px solid #e5e7eb !important; page-break-inside: avoid; }
             
-            /* 흑백 프린트 시 홀수 세션은 밝은 회색 배경 */
-            .session-odd { 
-                background-color: #e4e4e7 !important; 
-                color: #000 !important; 
-                border: 1px solid #a1a1aa !important; 
-            }  
-            /* 흑백 프린트 시 짝수 세션은 흰색 배경 + 사선 패턴 무늬 + 진한 테두리로 확실한 시각적 격차 제공 */
-            .session-even { 
-                background-color: #ffffff !important; 
-                background-image: linear-gradient(45deg, #efefef 25%, transparent 25%, transparent 50%, #efefef 50%, #efefef 75%, transparent 75%, transparent) !important;
-                background-size: 6px 6px !important;
-                color: #000 !important; 
-                border: 2px solid #000000 !important; 
-                font-weight: 900 !important;
-            } 
-
-            /* 공휴일 표기 흑백 최적화 */
-            .bg-legal { background-color: #404040 !important; color: white !important; }
-            .bg-academy { background-color: #d4d4d4 !important; color: black !important; border: 1px dashed #000 !important; }
-            .bg-prep { background-color: #737373 !important; color: white !important; }
-            .sat { color: #000 !important; text-decoration: underline; }
-            .sun { color: #000 !important; font-weight: 900; }
+            /* 인쇄 시에도 배경색과 글자색 스타일을 완벽하게 유지하도록 강제 설정 */
+            .session-odd, .session-even, .bg-legal, .bg-academy, .bg-prep {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
     </style>
 </head>
 <body class="bg-gray-50 p-4">
 
     <div class="no-print max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 스케줄러 (주 1회/2회 자동 감지 및 흑백 인쇄 보정 패키지)</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 설정 (컬러 인쇄 최적화 버전)</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작)</label>
                 <input type="number" id="baseYear" class="w-full border p-2 rounded font-bold" value="2026" onchange="calculateSchedule()">
             </div>
             <div class="md:col-span-2">
-                <label class="block text-xs font-bold mb-1">수업 요일 선택 (1개 체크 시 월 4회 / 2개 이상 체크 시 월 8회 자동 전환)</label>
+                <label class="block text-xs font-bold mb-1">수업 요일 지정 (1개 선택 시 4회, 2개 이상 선택 시 8회 자동 정산)</label>
                 <div class="flex gap-4 pt-2">
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="1" id="chk_mon" onchange="calculateSchedule()"> 월</label>
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="2" id="chk_tue" checked onchange="calculateSchedule()"> 화</label>
@@ -71,7 +60,7 @@
             </div>
             <div class="flex gap-2 items-end">
                 <button onclick="saveToFirebase()" class="w-1/2 bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 cursor-pointer">💾 서버 저장</button>
-                <button onclick="window.print()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 인쇄하기</button>
+                <button onclick="window.print()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 스케줄 인쇄</button>
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -90,7 +79,7 @@
         </div>
     </div>
 
-    <div id="printArea" class="max-w-7xl mx-auto bg-white p-4">
+    <div id="printArea" class="max-w-7xl mx-auto bg-white p-2">
         <h1 id="mainTitle" class="text-4xl font-black text-center mb-4 tracking-tight">2026 CLASS SCHEDULE</h1>
 
         <div class="flex justify-between items-end mb-4 border-b-2 border-black pb-2">
@@ -98,10 +87,10 @@
                 <div id="displayDays" class="text-2xl font-bold">수업 요일 : 화.목 ( Tue/Thu )</div>
                 <div id="sessionNotice" class="text-xs font-bold text-green-700 mt-1">** 한달 수강료 기준 연속 매칭 처리됩니다.</div>
             </div>
-            <div class="text-right text-xs font-bold space-y-0.5 text-gray-700 no-print">
-                <div><span class="inline-block w-6 h-3.5 bg-legal border border-gray-400 align-middle mr-1"></span> 법정 공휴일</div>
-                <div><span class="inline-block w-6 h-3.5 bg-academy border border-gray-400 align-middle mr-1"></span> 학원 지정 휴일</div>
-                <div><span class="inline-block w-6 h-3.5 bg-prep border border-gray-400 align-middle mr-1"></span> Prep Day</div>
+            <div class="text-right text-xs font-bold space-y-1 text-gray-800 border p-2 rounded bg-gray-50 print:bg-white">
+                <div><span class="inline-block w-5 h-3.5 bg-legal border border-gray-500 align-middle mr-1.5 rounded-sm"></span> 법정 공휴일</div>
+                <div><span class="inline-block w-5 h-3.5 bg-academy border border-yellow-600 align-middle mr-1.5 rounded-sm"></span> 학원 지정 휴일</div>
+                <div><span class="inline-block w-5 h-3.5 bg-prep border border-gray-500 align-middle mr-1.5 rounded-sm"></span> Prep Day</div>
             </div>
         </div>
 
@@ -185,7 +174,7 @@
             };
             try {
                 await fetch(DB_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                alert('✅ 설정이 실시간 DB에 성공적으로 동기화되었습니다.');
+                alert('💾 설정 데이터가 실시간 데이터베이스에 연동 저장되었습니다.');
             } catch(e) { alert('❌ 저장 실패'); }
         }
 
@@ -243,9 +232,8 @@
             const weekNames = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금'};
             document.getElementById('displayDays').innerText = `수업 요일 : ${selectedDays.map(d=>weekNames[d]).join('.')} 반`;
 
-            // ⚠️ 핵심 자동 감지 로직: 선택된 요일이 1개면 월 4회 끊기, 2개 이상이면 월 8회 끊기 설정
             const sessionCutCount = (selectedDays.length === 1) ? 4 : 8;
-            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 월 연속 ${sessionCutCount}회씩 자동 정산 연동)`;
+            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 연속 ${sessionCutCount}회 단위 세션 로테이션)`;
 
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
@@ -261,15 +249,22 @@
                 
                 if (legal.map[dKey] || academy.map[dKey] || prep.map[dKey]) continue;
                 if (selectedDays.includes(d.getDay())) {
-                    globalClassDays.push({ dateKey: dKey, month: curM, dateNum: curD });
+                    globalClassDays.push({ dateKey: dKey, month: curM, dateNum: curD, year: curY });
                 }
             }
 
-            // 결정된 카운트(4회 혹은 8회)를 적용하여 세션 슬라이싱
-            let sessions = []; let currentSession = [];
+            // ⚠️ 2월 몰아주기 전용 세션 빌더 로직 보정
+            let sessions = []; 
+            let currentSession = [];
+            
             globalClassDays.forEach((day, index) => {
                 currentSession.push(day);
-                if (currentSession.length === sessionCutCount && index < globalClassDays.length - 1) {
+                
+                // 내년 2월(즉, 학기 일정의 최종 월)에 포함된 수업일이 감지되기 시작하면, 
+                // 더 이상 4회/8회로 쪼개지 않고 마지막 세션에 끝까지 밀어 넣어 통합시킵니다.
+                const isFinalMonth = (day.year === baseYear + 1 && day.month === 2);
+                
+                if (!isFinalMonth && currentSession.length === sessionCutCount && index < globalClassDays.length - 1) {
                     sessions.push(currentSession);
                     currentSession = [];
                 }
@@ -288,6 +283,8 @@
 
                 session.forEach(day => {
                     dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
+                    
+                    // 각 월별 대표 노출 문구 셋업
                     if (!monthBannerInfo[day.month]) {
                         monthBannerInfo[day.month] = {
                             text: `${day.month}월 기간: ` + infoText,
@@ -295,11 +292,20 @@
                             count: session.length
                         };
                     }
+                    // 최종 2월은 몰아준 전체 개수가 제대로 기입되도록 오버라이딩
+                    if (day.month === 2) {
+                        monthBannerInfo[2] = {
+                            text: `2월 기간: ` + infoText,
+                            bgClass: colorClass,
+                            count: session.length
+                        };
+                    }
                 });
             });
 
-            const febInfo = monthBannerInfo[2] ? monthBannerInfo[2].count : (sessionCutCount + 3);
-            document.getElementById('alertFooter').innerText = `2월(${febInfo}회) 수강료 횟수가 다르오니 확인 부탁 드립니다. (매월 20일 수강료 안내)`;
+            // 2월 최종 잔여 횟수 실시간 산출 및 푸터 업데이트
+            const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
+            document.getElementById('alertFooter').innerText = `2월(${febFinalCount}회) 수강료 횟수가 다르오니 확인 부탁 드립니다. (매월 20일 수강료 안내)`;
 
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
