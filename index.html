@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (독립 인쇄 팝업판)</title>
+    <title>학원 연간 클래스 스케줄러 (독립 인쇄 오류 수정판)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .sat { color: #2563eb !important; } 
@@ -330,59 +330,37 @@
             }
         }
 
-        // ⚠️ [핵심 추가]: 오리지널 화면 파괴 없이 완전히 독립된 새 창을 만들어 출력하는 고정 모듈
+        // ⚠️ [안전한 문자열 합산 결합 방식으로 전면 교정]
         function printScheduler() {
-            const contents = document.getElementById("printArea").innerHTML;
-            const printWindow = window.open("", "_blank", "width=1100,height=850");
+            const htmlContent = document.getElementById("printArea").innerHTML;
+            const printWindow = window.open("", "_blank", "width=1150,height=850");
             
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>CLASS SCHEDULE PRINT</title>
-                    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>
-                    <style>
-                        body { background: white; font-family: sans-serif; padding: 10px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                        .sat { color: #2563eb !important; }
-                        .sun { color: #dc2626 !important; }
-                        .session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }
-                        .session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6 !important; }
-                        .bg-legal { background-color: #71717a !important; color: white !important; }
-                        .bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; }
-                        .bg-prep { background-color: #a1a1aa !important; color: white !important; }
-                        
-                        /* A4 용지 4열 맞춤형 그리드 오버라이드 고정 */
-                        .print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
-                        .print-card-layout { border: 1px solid #e5e7eb !important; page-break-inside: avoid; }
-                        
-                        @media print {
-                            @page { size: A4 portrait; margin: 6mm 8mm; }
-                            body { padding: 0; margin: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="max-w-7xl mx-auto">
-                        \${contents}
-                    </div>
-                    <script>
-                        // 클래스명 유실 대항 치환 처리
-                        const grid = document.querySelector("#calendarGrid");
-                        if(grid) {
-                            grid.className = "print-grid-layout";
-                            const cards = grid.querySelectorAll(".print-card");
-                            cards.forEach(c => c.className += " print-card-layout");
-                        }
-                        
-                        // 문서 로드 완료 시 인쇄창 실행 후 자동 종료
-                        window.parent.setTimeout(() => {
-                            window.print();
-                            window.close();
-                        }, 400);
-                    <\/script>
-                </body>
-                </html>
-            `);
+            let template = '<!DOCTYPE html><html><head><title>CLASS SCHEDULE PRINT</title>' +
+                '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>' +
+                '<style>' +
+                'body { background: white; font-family: sans-serif; padding: 10px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+                '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
+                '.session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }' +
+                '.session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6 !important; }' +
+                '.bg-legal { background-color: #71717a !important; color: white !important; }' +
+                '.bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; }' +
+                '.bg-prep { background-color: #a1a1aa !important; color: white !important; }' +
+                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }' +
+                '.print-card-layout { border: 1px solid #e5e7eb !important; page-break-inside: avoid; }' +
+                '@media print { @page { size: A4 portrait; margin: 6mm 8mm; } body { padding: 0; margin: 0; } }' +
+                '</style></head><body>' +
+                '<div class="max-w-7xl mx-auto">' + htmlContent + '</div>' +
+                '<script>' +
+                'const grid = document.querySelector("#calendarGrid");' +
+                'if(grid) {' +
+                '  grid.className = "print-grid-layout";' +
+                '  const cards = grid.querySelectorAll(".print-card");' +
+                '  cards.forEach(c => c.className += " print-card-layout");' +
+                '}' +
+                'setTimeout(function(){ window.print(); window.close(); }, 500);' +
+                '<\/script></body></html>';
+                
+            printWindow.document.write(template);
             printWindow.document.close();
         }
     </script>
