@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (2월 문구 조건부 제어판)</title>
+    <title>학원 연간 클래스 스케줄러 (매년 가변 일정 입력판)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .sat { color: #2563eb !important; } 
@@ -20,11 +20,11 @@
 <body class="bg-gray-50 p-4">
 
     <div class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 (2월 문구 예외 조건부 제어)</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 (매년 일정 가변 설정판)</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작)</label>
-                <input type="number" id="baseYear" class="w-full border p-2 rounded font-bold" value="2026" onchange="calculateSchedule()">
+                <input type="number" id="baseYear" class="w-full border p-2 rounded font-bold" value="2026" onchange="handleYearChange()">
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs font-bold mb-1">수업 요일 지정 (1개 선택 시 4회, 2개 이상 선택 시 8회 자동 분할)</label>
@@ -44,15 +44,15 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">법정 공휴일 (YYYY-MM-DD : 명칭)</label>
-                <textarea id="legalHolidays" class="w-full h-32 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
+                <textarea id="legalHolidays" class="w-full h-32 border p-2 text-xs font-mono rounded placeholder-gray-400" placeholder="예시) 2026-05-05 : 어린이날" oninput="calculateSchedule()"></textarea>
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">학원 지정 휴일 (YYYY-MM-DD : 명칭)</label>
-                <textarea id="academyHolidays" class="w-full h-32 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
+                <textarea id="academyHolidays" class="w-full h-32 border p-2 text-xs font-mono rounded placeholder-gray-400" placeholder="예시) 2026-07-27 : 여름방학" oninput="calculateSchedule()"></textarea>
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">Prep Day (YYYY-MM-DD : 명칭)</label>
-                <textarea id="prepDays" class="w-full h-32 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
+                <textarea id="prepDays" class="w-full h-32 border p-2 text-xs font-mono rounded placeholder-gray-400" placeholder="예시) 2026-05-01 : Prep Day" oninput="calculateSchedule()"></textarea>
             </div>
         </div>
     </div>
@@ -93,24 +93,7 @@
     <script>
         const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_continuous.json";
 
-        const defaultData = {
-            baseYear: 2026, selectedDays: [2, 4],
-            legal: [
-                "2026-03-02 : 삼일절 대체휴일", "2026-05-05 : 어린이날", "2026-05-25 : 부처님오신날 대체", 
-                "2026-06-06 : 현충일", "2026-08-17 : 광복절 대체휴일", 
-                "2026-09-24 : 추석 연휴", "2026-09-25 : 추석 연휴", "2026-09-26 : 추석 연휴", 
-                "2026-10-05 : 개천절 대체휴일", "2026-10-09 : 한글날", "2026-12-25 : 성탄절", 
-                "2027-01-01 : 새해 첫날", 
-                "2027-02-06 : 설날 연휴", "2027-02-08 : 설날 연휴", "2027-02-09 : 설날 연휴"
-            ],
-            academy: [
-                "2026-07-27 : 여름방학", "2026-07-28 : 여름방학", "2026-07-29 : 여름방학", 
-                "2026-07-30 : 여름방학", "2026-07-31 : 여름방학"
-            ],
-            prep: [
-                "2026-05-01 : Prep Day", "2026-07-17 : Prep Day", "2026-12-24 : Prep Day"
-            ]
-        };
+        // ⚠️ 고정 기본값 데이터셋(defaultData) 전면 제거 완료
 
         window.onload = async () => {
             try {
@@ -133,16 +116,21 @@
                         calculateSchedule(); return;
                     }
                 }
-                initDefault();
-            } catch(e) { initDefault(); }
+                clearInputs();
+            } catch(e) { clearInputs(); }
         };
 
-        function initDefault() {
-            document.getElementById('baseYear').value = defaultData.baseYear;
-            document.getElementById('legalHolidays').value = defaultData.legal.join('\n');
-            document.getElementById('academyHolidays').value = defaultData.academy.join('\n');
-            document.getElementById('prepDays').value = defaultData.prep.join('\n');
+        // 연도 변경 시 작동하는 제어 함수
+        function handleYearChange() {
+            clearInputs();
             calculateSchedule();
+        }
+
+        // 입력 폼을 깨끗하게 비워 새로운 연도 입력을 준비하는 함수
+        function clearInputs() {
+            document.getElementById('legalHolidays').value = '';
+            document.getElementById('academyHolidays').value = '';
+            document.getElementById('prepDays').value = '';
         }
 
         async function saveToFirebase() {
@@ -266,7 +254,6 @@
                 });
             });
 
-            // ⚠️ [핵심 분기 로직 반영]: 2월 횟수가 주당 기본 정산회수(4회 혹은 8회)와 일치하면 변동 안내문 제거
             const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
             if (febFinalCount === sessionCutCount) {
                 document.getElementById('alertFooter').innerText = `※ 매월 20일 수강료 안내`;
