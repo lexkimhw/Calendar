@@ -3,39 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (연속 휴일 병합판)</title>
+    <title>학원 연간 클래스 스케줄러 (주1회/2회 및 흑백 인쇄 대응형)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .sat { color: #2563eb !important; } 
         .sun { color: #dc2626 !important; } 
         
-        .session-odd { background-color: #bbf7d0 !important; color: black !important; }  
-        .session-even { background-color: #ffbbee !important; color: black !important; } 
+        /* [컬러 화면] 8회/4회차 세션별 교차 색상 */
+        .session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac; }  
+        .session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6; } 
         
         .bg-legal { background-color: #71717a !important; color: white !important; } 
         .bg-academy { background-color: #fde047 !important; color: black !important; } 
         .bg-prep { background-color: #a1a1aa !important; color: white !important; } 
 
+        /* 🖨️ [흑백 인쇄용 강제 오버라이드 고도화] */
         @media print {
             .no-print { display: none !important; }
             body { background: white; padding: 0; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             @page { size: A4 portrait; margin: 8mm 10mm; }
             .print-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
-            .print-card { border: 1px solid #ddd !important; page-break-inside: avoid; }
+            .print-card { border: 1px solid #666 !important; page-break-inside: avoid; }
+            
+            /* 흑백 프린트 시 홀수 세션은 밝은 회색 배경 */
+            .session-odd { 
+                background-color: #e4e4e7 !important; 
+                color: #000 !important; 
+                border: 1px solid #a1a1aa !important; 
+            }  
+            /* 흑백 프린트 시 짝수 세션은 흰색 배경 + 사선 패턴 무늬 + 진한 테두리로 확실한 시각적 격차 제공 */
+            .session-even { 
+                background-color: #ffffff !important; 
+                background-image: linear-gradient(45deg, #efefef 25%, transparent 25%, transparent 50%, #efefef 50%, #efefef 75%, transparent 75%, transparent) !important;
+                background-size: 6px 6px !important;
+                color: #000 !important; 
+                border: 2px solid #000000 !important; 
+                font-weight: 900 !important;
+            } 
+
+            /* 공휴일 표기 흑백 최적화 */
+            .bg-legal { background-color: #404040 !important; color: white !important; }
+            .bg-academy { background-color: #d4d4d4 !important; color: black !important; border: 1px dashed #000 !important; }
+            .bg-prep { background-color: #737373 !important; color: white !important; }
+            .sat { color: #000 !important; text-decoration: underline; }
+            .sun { color: #000 !important; font-weight: 900; }
         }
     </style>
 </head>
 <body class="bg-gray-50 p-4">
 
     <div class="no-print max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 스케줄 관리 (연속 일정 자동 묶음 기능)</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 스케줄러 (주 1회/2회 자동 감지 및 흑백 인쇄 보정 패키지)</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작)</label>
                 <input type="number" id="baseYear" class="w-full border p-2 rounded font-bold" value="2026" onchange="calculateSchedule()">
             </div>
             <div class="md:col-span-2">
-                <label class="block text-xs font-bold mb-1">수업 요일 선택</label>
+                <label class="block text-xs font-bold mb-1">수업 요일 선택 (1개 체크 시 월 4회 / 2개 이상 체크 시 월 8회 자동 전환)</label>
                 <div class="flex gap-4 pt-2">
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="1" id="chk_mon" onchange="calculateSchedule()"> 월</label>
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="2" id="chk_tue" checked onchange="calculateSchedule()"> 화</label>
@@ -46,21 +71,21 @@
             </div>
             <div class="flex gap-2 items-end">
                 <button onclick="saveToFirebase()" class="w-1/2 bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 cursor-pointer">💾 서버 저장</button>
-                <button onclick="window.print()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ A4 인쇄</button>
+                <button onclick="window.print()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 인쇄하기</button>
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">법정 공휴일 (YYYY-MM-DD : 명칭)</label>
-                <textarea id="legalHolidays" class="w-full h-36 border p-2 text-xs font-mono rounded leading-relaxed" oninput="calculateSchedule()"></textarea>
+                <textarea id="legalHolidays" class="w-full h-32 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">학원 지정 휴일 (YYYY-MM-DD : 명칭)</label>
-                <textarea id="academyHolidays" class="w-full h-36 border p-2 text-xs font-mono rounded leading-relaxed" oninput="calculateSchedule()"></textarea>
+                <textarea id="academyHolidays" class="w-full h-32 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">Prep Day (YYYY-MM-DD : 명칭)</label>
-                <textarea id="prepDays" class="w-full h-36 border p-2 text-xs font-mono rounded leading-relaxed" oninput="calculateSchedule()"></textarea>
+                <textarea id="prepDays" class="w-full h-32 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
             </div>
         </div>
     </div>
@@ -71,9 +96,9 @@
         <div class="flex justify-between items-end mb-4 border-b-2 border-black pb-2">
             <div>
                 <div id="displayDays" class="text-2xl font-bold">수업 요일 : 화.목 ( Tue/Thu )</div>
-                <div class="text-xs font-bold text-green-700 mt-1">** 한달 수강료 8회 기준으로 월간 경계를 넘어 연속적으로 매칭 처리됩니다.</div>
+                <div id="sessionNotice" class="text-xs font-bold text-green-700 mt-1">** 한달 수강료 기준 연속 매칭 처리됩니다.</div>
             </div>
-            <div class="text-right text-xs font-bold space-y-0.5 text-gray-700">
+            <div class="text-right text-xs font-bold space-y-0.5 text-gray-700 no-print">
                 <div><span class="inline-block w-6 h-3.5 bg-legal border border-gray-400 align-middle mr-1"></span> 법정 공휴일</div>
                 <div><span class="inline-block w-6 h-3.5 bg-academy border border-gray-400 align-middle mr-1"></span> 학원 지정 휴일</div>
                 <div><span class="inline-block w-6 h-3.5 bg-prep border border-gray-400 align-middle mr-1"></span> Prep Day</div>
@@ -164,12 +189,9 @@
             } catch(e) { alert('❌ 저장 실패'); }
         }
 
-        // 텍스트 파싱 및 맵 생성 함수
         function parseHolidayLines(id, baseYear) {
             const lines = document.getElementById(id).value.split('\n');
-            const map = {}; 
-            const rawList = []; // 날짜순 정렬 및 연속 일정 결합 처리를 위한 임시 배열
-
+            const map = {}; const rawList = [];
             const minDate = new Date(baseYear, 2, 1);
             const maxDate = new Date(baseYear + 1, 2, 0);
 
@@ -179,61 +201,37 @@
                 const dateMatch = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
                 if (!dateMatch) return;
 
-                const inputYear = parseInt(dateMatch[1]); 
-                const inputMonth = parseInt(dateMatch[2]); 
-                const inputDay = parseInt(dateMatch[3]);
+                const inputYear = parseInt(dateMatch[1]); const inputMonth = parseInt(dateMatch[2]); const inputDay = parseInt(dateMatch[3]);
                 const dateObj = new Date(inputYear, inputMonth - 1, inputDay);
                 
                 if (dateObj >= minDate && dateObj <= maxDate) {
                     const dateKey = `${inputYear}-${String(inputMonth).padStart(2,'0')}-${String(inputDay).padStart(2,'0')}`;
                     map[dateKey] = name;
-                    
-                    rawList.push({
-                        dateObj: dateObj,
-                        year: inputYear,
-                        month: inputMonth,
-                        day: inputDay,
-                        name: name
-                    });
+                    rawList.push({ dateObj, year: inputYear, month: inputMonth, day: inputDay, name });
                 }
             });
 
-            // 날짜 시간 정렬
             rawList.sort((a, b) => a.dateObj - b.dateObj);
-
-            // ⚠️ 핵심 로직: 동일한 명칭을 가진 연속된 휴일을 한 묶음으로 결합하는 프로세스
-            const textList = {}; // 최종 월별 컴팩트 텍스트 컬렉션
-            const weekLabels = ['일', '월', '화', '수', '목', '금', '토'];
+            const textList = {}; const weekLabels = ['일', '월', '화', '수', '목', '금', '토'];
 
             let i = 0;
             while (i < rawList.length) {
-                let startItem = rawList[i];
-                let endItem = rawList[i];
-                
-                // 명칭이 같고, 하루 간격으로 연속된 날짜가 이어지는지 확인
-                while (i + 1 < rawList.length && 
-                       rawList[i + 1].name === startItem.name && 
-                       (rawList[i + 1].dateObj - endItem.dateObj) === 86400000) {
-                    i++;
-                    endItem = rawList[i];
+                let startItem = rawList[i]; let endItem = rawList[i];
+                while (i + 1 < rawList.length && rawList[i + 1].name === startItem.name && (rawList[i + 1].dateObj - endItem.dateObj) === 86400000) {
+                    i++; endItem = rawList[i];
                 }
-
                 const startMonth = startItem.month;
                 if (!textList[startMonth]) textList[startMonth] = [];
-
                 const startDayLabel = weekLabels[startItem.dateObj.getDay()];
                 const endDayLabel = weekLabels[endItem.dateObj.getDay()];
 
                 if (startItem === endItem) {
-                    // 단 하루짜리 휴일 일정인 경우
                     textList[startMonth].push(`${startItem.month}/${startItem.day}(${startDayLabel}) : ${startItem.name}`);
                 } else {
-                    // 이틀 이상 이어지는 연휴 일정인 경우 기간 표현식으로 압축 처리 (예: 7/27(월)~7/31(금))
                     textList[startMonth].push(`${startItem.month}/${startItem.day}(${startDayLabel})~${endItem.month}/${endItem.day}(${endDayLabel}) : ${startItem.name}`);
                 }
                 i++;
             }
-
             return { map, textList };
         }
 
@@ -245,6 +243,10 @@
             const weekNames = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금'};
             document.getElementById('displayDays').innerText = `수업 요일 : ${selectedDays.map(d=>weekNames[d]).join('.')} 반`;
 
+            // ⚠️ 핵심 자동 감지 로직: 선택된 요일이 1개면 월 4회 끊기, 2개 이상이면 월 8회 끊기 설정
+            const sessionCutCount = (selectedDays.length === 1) ? 4 : 8;
+            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 월 연속 ${sessionCutCount}회씩 자동 정산 연동)`;
+
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
             const prep = parseHolidayLines('prepDays', baseYear);
@@ -254,34 +256,27 @@
             let endDate = new Date(baseYear + 1, 2, 0);
 
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const curY = d.getFullYear();
-                const curM = d.getMonth() + 1;
-                const curD = d.getDate();
+                const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curD = d.getDate();
                 const dKey = `${curY}-${String(curM).padStart(2,'0')}-${String(curD).padStart(2,'0')}`;
                 
                 if (legal.map[dKey] || academy.map[dKey] || prep.map[dKey]) continue;
                 if (selectedDays.includes(d.getDay())) {
-                    globalClassDays.push({
-                        dateKey: dKey,
-                        month: curM,
-                        dateNum: curD
-                    });
+                    globalClassDays.push({ dateKey: dKey, month: curM, dateNum: curD });
                 }
             }
 
-            let sessions = [];
-            let currentSession = [];
+            // 결정된 카운트(4회 혹은 8회)를 적용하여 세션 슬라이싱
+            let sessions = []; let currentSession = [];
             globalClassDays.forEach((day, index) => {
                 currentSession.push(day);
-                if (currentSession.length === 8 && index < globalClassDays.length - 1) {
+                if (currentSession.length === sessionCutCount && index < globalClassDays.length - 1) {
                     sessions.push(currentSession);
                     currentSession = [];
                 }
             });
             if (currentSession.length > 0) sessions.push(currentSession);
 
-            const dateStyleMap = {};
-            const monthBannerInfo = {}; 
+            const dateStyleMap = {}; const monthBannerInfo = {}; 
 
             sessions.forEach((session, sIdx) => {
                 const sessionNum = sIdx + 1;
@@ -303,7 +298,7 @@
                 });
             });
 
-            const febInfo = monthBannerInfo[2] ? monthBannerInfo[2].count : 11;
+            const febInfo = monthBannerInfo[2] ? monthBannerInfo[2].count : (sessionCutCount + 3);
             document.getElementById('alertFooter').innerText = `2월(${febInfo}회) 수강료 횟수가 다르오니 확인 부탁 드립니다. (매월 20일 수강료 안내)`;
 
             const grid = document.getElementById('calendarGrid');
@@ -315,7 +310,6 @@
                 
                 const firstDayIdx = new Date(currYear, month - 1, 1).getDay();
                 const lastDateNum = new Date(currYear, month, 0).getDate();
-
                 const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200" };
 
                 let html = `
@@ -355,7 +349,6 @@
 
                 html += `</tr></tbody></table></div>`;
 
-                // ⚠️ 개별 줄바꿈 대신 결합된 묶음 텍스트 컴포넌트 렌더링
                 let infoArr = [];
                 if(legal.textList[month]) infoArr.push(...legal.textList[month]);
                 if(academy.textList[month]) infoArr.push(...academy.textList[month]);
