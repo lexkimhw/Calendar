@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (연속 8회 세션제)</title>
+    <title>학원 연간 클래스 스케줄러 (연속 8회 세션제 - 요일 보정판)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .sat { color: #2563eb !important; } 
@@ -29,7 +29,7 @@
 <body class="bg-gray-50 p-4">
 
     <div class="no-print max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 연속 8회차 기준 세션 스케줄러 (월간 중첩 지원)</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 연속 8회차 기준 스케줄러 (요일 정밀 동기화)</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작)</label>
@@ -38,11 +38,11 @@
             <div class="md:col-span-2">
                 <label class="block text-xs font-bold mb-1">수업 요일 선택</label>
                 <div class="flex gap-4 pt-2">
-                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="1" onchange="calculateSchedule()"> 월</label>
-                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="2" checked onchange="calculateSchedule()"> 화</label>
-                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="3" onchange="calculateSchedule()"> 수</label>
-                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="4" checked onchange="calculateSchedule()"> 목</label>
-                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="5" onchange="calculateSchedule()"> 금</label>
+                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="1" id="chk_mon" onchange="calculateSchedule()"> 월</label>
+                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="2" id="chk_tue" checked onchange="calculateSchedule()"> 화</label>
+                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="3" id="chk_wed" onchange="calculateSchedule()"> 수</label>
+                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="4" id="chk_thu" checked onchange="calculateSchedule()"> 목</label>
+                    <label class="cursor-pointer"><input type="checkbox" class="day-check" value="5" id="chk_fri" onchange="calculateSchedule()"> 금</label>
                 </div>
             </div>
             <div class="flex gap-2 items-end">
@@ -125,9 +125,15 @@
                         document.getElementById('legalHolidays').value = (data.legal || []).join('\n');
                         document.getElementById('academyHolidays').value = (data.academy || []).join('\n');
                         document.getElementById('prepDays').value = (data.prep || []).join('\n');
-                        document.querySelectorAll('.day-check').forEach(cb => {
-                            cb.checked = data.selectedDays ? data.selectedDays.includes(parseInt(cb.value)) : false;
-                        });
+                        
+                        // 서버 데이터를 기반으로 체크박스 상태 정밀 업데이트
+                        const targetDays = data.selectedDays || [2, 4];
+                        document.getElementById('chk_mon').checked = targetDays.includes(1);
+                        document.getElementById('chk_tue').checked = targetDays.includes(2);
+                        document.getElementById('chk_wed').checked = targetDays.includes(3);
+                        document.getElementById('chk_thu').checked = targetDays.includes(4);
+                        document.getElementById('chk_fri').checked = targetDays.includes(5);
+
                         calculateSchedule();
                         return;
                     }
@@ -172,6 +178,8 @@
                 if (!dateMatch) return;
 
                 const inputYear = parseInt(dateMatch[1]); const inputMonth = parseInt(dateMatch[2]); const inputDay = parseInt(dateMatch[3]);
+                
+                // 타임존 오차 방지를 위해 UTC 대신 안전하게 로컬 Date 생성
                 const dateObj = new Date(inputYear, inputMonth - 1, inputDay);
                 
                 if (dateObj >= minDate && dateObj <= maxDate) {
@@ -190,50 +198,54 @@
             document.getElementById('mainTitle').innerText = `${baseYear} CLASS SCHEDULE`;
 
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
+            const weekNames = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금'};
+            document.getElementById('displayDays').innerText = `수업 요일 : ${selectedDays.map(d=>weekNames[d]).join('.')} 반`;
+
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
             const prep = parseHolidayLines('prepDays', baseYear);
 
-            // 1단계: 1년 전체를 통틀어 '실제 수업이 진행되는 날'만 순서대로 전부 추출합니다.
+            // 1단계: 1년 범위의 모든 일자를 순회하며 '수업 요일 매칭' 판정 (시작일/말일 안전 정의)
             let globalClassDays = [];
             let startDate = new Date(baseYear, 2, 1);
             let endDate = new Date(baseYear + 1, 2, 0);
 
+            // 타임존 밀림을 원천 차단하기 위해 년/월/일 값을 직접 연산하여 순회
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const dKey = d.toISOString().split('T')[0];
+                const curY = d.getFullYear();
+                const curM = d.getMonth() + 1;
+                const curD = d.getDate();
+                const dKey = `${curY}-${String(curM).padStart(2,'0')}-${String(curD).padStart(2,'0')}`;
+                
                 if (legal.map[dKey] || academy.map[dKey] || prep.map[dKey]) continue;
+                
+                // ⚠️ 요일 판단 정밀 일치화 보정
                 if (selectedDays.includes(d.getDay())) {
                     globalClassDays.push({
                         dateKey: dKey,
-                        month: d.getMonth() + 1,
-                        dateNum: d.getDate()
+                        month: curM,
+                        dateNum: curD
                     });
                 }
             }
 
-            // 2단계: 8회씩 묶어 전체 순번 세션 분할 작업 수행 (단, 마지막 2월 묶음은 남은거 다 몰아줌)
+            // 2단계: 8회 단위 연속 세션 쪼개기 작업
             let sessions = [];
             let currentSession = [];
             
             globalClassDays.forEach((day, index) => {
                 currentSession.push(day);
-                
-                // 일반적인 경우 8회가 차면 세션을 마감함
-                // 마지막에 도달하면 남은 일수가 8회 미만이든 이상이든 한 세션으로 묶어버림 (마지막 내년 2월 몰아주기 자동 구현)
                 if (currentSession.length === 8 && index < globalClassDays.length - 1) {
                     sessions.push(currentSession);
                     currentSession = [];
                 }
             });
             if (currentSession.length > 0) {
-                // 마지막 세션 추가
                 sessions.push(currentSession);
             }
 
-            // 각 세션별로 홀수 세션은 'session-odd(연두)', 짝수 세션은 'session-even(분홍)' 색상 부여
-            // 개별 날짜가 어떤 색과 텍스트 정보를 가졌는지 맵으로 재구조화
             const dateStyleMap = {};
-            const monthBannerInfo = {}; // 각 달(1~12)에 노출할 기간 텍스트 모음
+            const monthBannerInfo = {}; 
 
             sessions.forEach((session, sIdx) => {
                 const sessionNum = sIdx + 1;
@@ -249,8 +261,6 @@
                         sessionNum: sessionNum
                     };
                     
-                    // 각 날짜가 속한 달력의 '상단 배너'에 세션 정보 기입
-                    // 만약 한 달에 여러 세션이 겹치면 주요 대표 일정이 기재되도록 처리
                     if (!monthBannerInfo[day.month]) {
                         monthBannerInfo[day.month] = {
                             text: `${day.month}월 기간: ` + infoText,
@@ -261,11 +271,10 @@
                 });
             });
 
-            // 내년 2월의 실제 남은 최종 횟수를 하단 고정 배너 텍스트에 꽂아줌 (예: 11회)
             const febInfo = monthBannerInfo[2] ? monthBannerInfo[2].count : 11;
             document.getElementById('alertFooter').innerText = `2월(${febInfo}회) 수강료 횟수가 다르오니 확인 부탁 드립니다. (매월 20일 수강료 안내)`;
 
-            // 3단계: 화면에 12달 렌더링 시작
+            // 3단계: 달력 화면 출력 그리기
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
 
@@ -305,7 +314,6 @@
                     else if (academy.map[dKey]) bgClass = "bg-academy";
                     else if (prep.map[dKey]) bgClass = "bg-prep";
                     else if (dateStyleMap[dKey]) {
-                        // 연속 스위칭 스케줄러가 지정한 개별 고유 컬러 클래스 매핑
                         bgClass = dateStyleMap[dKey].colorClass;
                     }
 
