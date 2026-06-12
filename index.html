@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (월별 회차 일치형)</title>
+    <title>학원 연간 클래스 스케줄러 (연도별 데이터 필터링형)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        /* 토요일 파란색 / 일요일 빨간색 강제 지정 */
         .sat { color: #2563eb !important; } 
         .sun { color: #dc2626 !important; } 
         
-        /* 세션/월별 교차 색상 규칙 (연두/분홍) */
-        .session-odd { background-color: #bbf7d0 !important; color: black !important; }  /* 홀수 번째 묶음 (연두) */
-        .session-even { background-color: #ffbbee !important; color: black !important; } /* 짝수 번째 묶음 (분홍) */
+        .session-odd { background-color: #bbf7d0 !important; color: black !important; }  
+        .session-even { background-color: #ffbbee !important; color: black !important; } 
         
-        /* 특수 지정일 색상 정의 */
         .bg-legal { background-color: #71717a !important; color: white !important; } 
         .bg-academy { background-color: #fde047 !important; color: black !important; } 
         .bg-prep { background-color: #a1a1aa !important; color: white !important; } 
@@ -31,10 +28,10 @@
 <body class="bg-gray-50 p-4">
 
     <div class="no-print max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">🗓️ 학원 스케줄 설정 대시보드</h2>
+        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 스케줄 설정 대시보드 (정밀 연도 필터링)</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
-                <label class="block text-xs font-bold mb-1">기준 연도 설정</label>
+                <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작 기준)</label>
                 <input type="number" id="baseYear" class="w-full border p-2 rounded font-bold" value="2026" onchange="calculateSchedule()">
             </div>
             <div class="md:col-span-2">
@@ -54,18 +51,19 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-                <label class="block text-[11px] font-bold text-gray-500 mb-1">법정 공휴일 리스트 (MM-DD : 명칭)</label>
-                <textarea id="legalHolidays" class="w-full h-24 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">법정 공휴일 리스트 (YYYY-MM-DD : 명칭)</label>
+                <textarea id="legalHolidays" class="w-full h-32 border p-2 text-xs font-mono rounded leading-relaxed" placeholder="2026-03-02 : 삼일절 대체휴일" oninput="calculateSchedule()"></textarea>
             </div>
             <div>
-                <label class="block text-[11px] font-bold text-gray-500 mb-1">학원 지정 휴일 리스트 (MM-DD : 명칭)</label>
-                <textarea id="academyHolidays" class="w-full h-24 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">학원 지정 휴일 리스트 (YYYY-MM-DD : 명칭)</label>
+                <textarea id="academyHolidays" class="w-full h-32 border p-2 text-xs font-mono rounded leading-relaxed" placeholder="2026-07-27 : 여름방학" oninput="calculateSchedule()"></textarea>
             </div>
             <div>
-                <label class="block text-[11px] font-bold text-gray-500 mb-1">Prep Day 리스트 (MM-DD : 명칭)</label>
-                <textarea id="prepDays" class="w-full h-24 border p-2 text-xs font-mono rounded" oninput="calculateSchedule()"></textarea>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">Prep Day 리스트 (YYYY-MM-DD : 명칭)</label>
+                <textarea id="prepDays" class="w-full h-32 border p-2 text-xs font-mono rounded leading-relaxed" placeholder="2026-05-01 : Prep Day" oninput="calculateSchedule()"></textarea>
             </div>
         </div>
+        <p class="text-[11px] text-gray-500 mt-2">※ 여러 연도의 데이터를 한꺼번에 입력해 두어도, 위 '기준 연도'에 해당하는 기간(해당년도 3월 ~ 다음년도 2월)의 자료만 선별되어 달력에 나타납니다.</p>
     </div>
 
     <div id="printArea" class="max-w-7xl mx-auto bg-white p-4">
@@ -80,7 +78,6 @@
                 <div><span class="inline-block w-6 h-3.5 bg-legal border border-gray-400 align-middle mr-1"></span> 법정 공휴일</div>
                 <div><span class="inline-block w-6 h-3.5 bg-academy border border-gray-400 align-middle mr-1"></span> 학원 지정 휴일</div>
                 <div><span class="inline-block w-6 h-3.5 bg-prep border border-gray-400 align-middle mr-1"></span> Prep Day</div>
-                <div class="text-[10px] text-gray-400 font-normal pt-1">※ 위 지정일정에는 학원 수업이 진행되지 않습니다.</div>
             </div>
         </div>
 
@@ -91,21 +88,34 @@
             <p>※ 수강료 납부 기간은 매월 25일 부터 말일까지 입니다.</p>
             <div class="flex justify-between items-center">
                 <p>※ 휴강 일정과 특강 일정은 학원 사정에 따라 변경 될 수도 있음을 알려 드립니다.</p>
-                <p id="alertFooter" class="text-red-600 text-sm font-extrabold">2월 수강료 횟수가 다르오니 확인 부탁 드립니다. (매월 20일 수강료 안내)</p>
+                <p id="alertFooter" class="text-red-600 text-sm font-extrabold">2월 수강료 횟수가 다르오니 확인 부탁 드립니다.</p>
             </div>
         </div>
     </div>
 
     <script>
-        // 요청된 파이어베이스 리얼타임 데이터베이스 경로 주소 연동
-        const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_final.json";
+        const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_final_v4.json";
 
+        // YYYY-MM-DD 포맷을 적용한 다년도 샘플 믹스 데이터
         const defaultData = {
             baseYear: 2026,
-            selectedDays: [2, 4], // 화, 목 고정
-            legal: ["03-02:삼일절 대체휴일", "05-05:어린이날", "05-25:부처님오신날 대체", "06-06:현충일", "08-15:광복절 대체", "09-24:추석 연휴", "09-25:추석 연휴", "09-26:추석 연휴", "10-03:개천절", "10-09:한글날", "12-25:성탄절", "01-01:신정", "02-15:설날", "02-16:설날", "02-17:설날"],
-            academy: ["07-27:여름방학", "07-28:여름방학", "07-29:여름방학", "07-30:여름방학", "07-31:여름방학"],
-            prep: ["05-01:Prep Day", "07-17:Prep Day", "12-24:Prep Day"]
+            selectedDays: [2, 4],
+            legal: [
+                "2025-05-05 : 2025년 어린이날 (출력 제외됨)",
+                "2026-03-02 : 삼일절 대체휴일", "2026-05-05 : 어린이날", "2026-05-25 : 부처님오신날 대체", 
+                "2026-06-06 : 현충일", "2026-08-17 : 광복절 대체휴일", "2026-09-24 : 추석 연휴", 
+                "2026-09-25 : 추석 연휴", "2026-09-26 : 추석 연휴", "2026-10-05 : 개천절 대체휴일", 
+                "2026-10-09 : 한글날", "2026-12-25 : 성탄절", "2027-01-01 : 새해 첫날", 
+                "2027-02-06 : 설날 연휴", "2027-02-08 : 설날 연휴", "2027-02-09 : 설날 연휴",
+                "2028-03-01 : 2028년 삼일절 (출력 제외됨)"
+            ],
+            academy: [
+                "2026-07-27 : 여름방학", "2026-07-28 : 여름방학", "2026-07-29 : 여름방학", 
+                "2026-07-30 : 여름방학", "2026-07-31 : 여름방학"
+            ],
+            prep: [
+                "2026-05-01 : Prep Day", "2026-07-17 : Prep Day", "2026-12-24 : Prep Day"
+            ]
         };
 
         window.onload = async () => {
@@ -148,70 +158,81 @@
             };
             try {
                 await fetch(DB_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                alert('✅ 설정이 Firebase 데이터베이스에 실시간 동기화되었습니다.');
+                alert('✅ 데이터가 년월일(YYYY-MM-DD) 기반 구조로 서버에 저장되었습니다.');
             } catch(e) { alert('❌ 저장에 실패했습니다.'); }
         }
 
-        function parseHolidayLines(id, year) {
+        // 입력 문자열을 정밀 파싱하여 유효 범위(baseYear 3월 ~ baseYear+1 2월) 데이터만 추출
+        function parseHolidayLines(id, baseYear) {
             const lines = document.getElementById(id).value.split('\n');
-            const map = {}; const textList = {};
+            const map = {}; 
+            const textList = {}; // 하단 리스트 출력용 (Key: 월 숫자)
+
+            const minDate = new Date(baseYear, 2, 1); // 3월 1일
+            const maxDate = new Date(baseYear + 1, 2, 0); // 내년 2월 말일
+
             lines.forEach(line => {
                 if(!line.includes(':')) return;
                 const [datePart, name] = line.split(':').map(s => s.trim());
-                const [mm, dd] = datePart.split('-').map(Number);
-                if (isNaN(mm) || isNaN(dd)) return;
+                
+                // 정규표현식으로 YYYY-MM-DD 구조 검증 및 분리
+                const dateMatch = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (!dateMatch) return;
 
-                const calcYear = (mm < 3) ? year + 1 : year;
-                const dateKey = `${calcYear}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
-                map[dateKey] = name;
+                const inputYear = parseInt(dateMatch[1]);
+                const inputMonth = parseInt(dateMatch[2]);
+                const inputDay = parseInt(dateMatch[3]);
 
-                const dObj = new Date(calcYear, mm - 1, dd);
-                const dayLabel = ['일', '월', '화', '수', '목', '금', '토'][dObj.getDay()];
-                if(!textList[mm]) textList[mm] = [];
-                textList[mm].push(`${mm}/${dd}(${dayLabel}) : ${name}`);
+                const dateObj = new Date(inputYear, inputMonth - 1, inputDay);
+                
+                // ⚠️ 핵심 조건 필터링: 입력된 날짜가 현재 기준 일정표 범위 안에 들어오는지 체크
+                if (dateObj >= minDate && dateObj <= maxDate) {
+                    const dateKey = `${inputYear}-${String(inputMonth).padStart(2,'0')}-${String(inputDay).padStart(2,'0')}`;
+                    map[dateKey] = name;
+
+                    const dayLabel = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()];
+                    if(!textList[inputMonth]) textList[inputMonth] = [];
+                    textList[inputMonth].push(`${inputMonth}/${inputDay}(${dayLabel}) : ${name}`);
+                }
             });
             return { map, textList };
         }
 
         function calculateSchedule() {
-            const year = parseInt(document.getElementById('baseYear').value);
-            document.getElementById('mainTitle').innerText = `${year} CLASS SCHEDULE`;
+            const baseYear = parseInt(document.getElementById('baseYear').value);
+            document.getElementById('mainTitle').innerText = `${baseYear} CLASS SCHEDULE`;
 
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
             const weekNames = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금'};
             document.getElementById('displayDays').innerText = `수업 요일 : ${selectedDays.map(d=>weekNames[d]).join('.')} 반`;
 
-            const legal = parseHolidayLines('legalHolidays', year);
-            const academy = parseHolidayLines('academyHolidays', year);
-            const prep = parseHolidayLines('prepDays', year);
+            // 설정 연도 기준 데이터만 파싱하여 가져옴
+            const legal = parseHolidayLines('legalHolidays', baseYear);
+            const academy = parseHolidayLines('academyHolidays', baseYear);
+            const prep = parseHolidayLines('prepDays', baseYear);
 
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
 
-            // ⚠️ 핵심 연산: 달력의 인덱스 순서(1번째 루프=3월, ..., 12번째 루프=2월)에 맞춰 월별 세션 색상 스위칭 카운터 구성
             let sessionColorIndex = 1; 
 
             for (let i = 0; i < 12; i++) {
                 const month = (i + 2) % 12 + 1;
-                const currYear = (month < 3) ? year + 1 : year;
+                const currYear = (month < 3) ? baseYear + 1 : baseYear;
                 
                 const firstDay = new Date(currYear, month - 1, 1).getDay();
                 const lastDate = new Date(currYear, month, 0).getDate();
 
-                // 해당 월 안에서 순수 화목(수업 가능일) 일자 배열 추출
                 let activeDaysInMonth = [];
                 for (let d = 1; d <= lastDate; d++) {
-                    const dateObj = new Date(currYear, month - 1, d);
-                    const dKey = dateObj.toISOString().split('T')[0];
+                    const dKey = `${currYear}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 
-                    // 제외 조건 통과 확인
                     if (legal.map[dKey] || academy.map[dKey] || prep.map[dKey]) continue;
-                    if (selectedDays.includes(dateObj.getDay())) {
+                    if (selectedDays.includes(new Date(currYear, month - 1, d).getDay())) {
                         activeDaysInMonth.push(d);
                     }
                 }
 
-                // 배너 텍스트 및 전용 스타일 생성 (요청사항: 3월 화목 기준 3/3~3/26 8회 완벽 구현)
                 let bannerText = "수업 없음";
                 let currentMonthColorClass = "bg-gray-200";
 
@@ -220,12 +241,10 @@
                     const endDay = activeDaysInMonth[activeDaysInMonth.length - 1];
                     bannerText = `${month}월 기간: ${month}/${startDay} ~ ${month}/${endDay} (${activeDaysInMonth.length}회)`;
                     
-                    // 홀수 달/세션 묶음은 연두색, 짝수는 분홍색 매핑
                     currentMonthColorClass = (sessionColorIndex % 2 !== 0) ? "session-odd" : "session-even";
-                    sessionColorIndex++; // 유효한 수업 달일 경우에만 색상 토글 인덱스 증가
+                    sessionColorIndex++;
                 }
 
-                // 하단 경고 문구용 동적 감지 (마지막 2월에 안내문 자동 동기화)
                 if (month === 2) {
                     document.getElementById('alertFooter').innerText = `2월(${activeDaysInMonth.length}회) 수강료 횟수가 다르오니 확인 부탁 드립니다. (매월 20일 수강료 안내)`;
                 }
@@ -247,7 +266,7 @@
 
                 for (let d = 1; d <= lastDate; d++) {
                     const dateObj = new Date(currYear, month - 1, d);
-                    const dKey = dateObj.toISOString().split('T')[0];
+                    const dKey = `${currYear}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                     const dayOfWeek = dateObj.getDay();
                     
                     if ((firstDay + d - 1) % 7 === 0 && d !== 1) html += `</tr><tr>`;
@@ -257,7 +276,6 @@
                     else if (academy.map[dKey]) bgClass = "bg-academy";
                     else if (prep.map[dKey]) bgClass = "bg-prep";
                     else if (activeDaysInMonth.includes(d)) {
-                        // 상단 배너 색상과 달력 안의 요일 색상을 정밀 일치시킴
                         bgClass = currentMonthColorClass;
                     }
 
@@ -270,7 +288,7 @@
 
                 html += `</tr></tbody></table></div>`;
 
-                // 해당 월 하단부에 휴일 디테일 정보 텍스트 자동 나열
+                // 해당 월 하단 정보 바인딩
                 let infoArr = [];
                 if(legal.textList[month]) infoArr.push(...legal.textList[month]);
                 if(academy.textList[month]) infoArr.push(...academy.textList[month]);
