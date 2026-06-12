@@ -3,45 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>학원 연간 클래스 스케줄러 (레이아웃 및 문구 최종 수정판)</title>
+    <title>학원 연간 클래스 스케줄러 (독립 인쇄 팝업판)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         .sat { color: #2563eb !important; } 
         .sun { color: #dc2626 !important; } 
         
-        /* [컬러 가이드 구성] */
         .session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }  
         .session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6 !important; } 
         
         .bg-legal { background-color: #71717a !important; color: white !important; } 
         .bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; } 
         .bg-prep { background-color: #a1a1aa !important; color: white !important; } 
-
-        /* 🖨️ 인쇄 세팅 (화면 컬러 완벽 유지 + 레이아웃 정돈) */
-        @media print {
-            .no-print { display: none !important; }
-            body { 
-                background: white; 
-                padding: 0; 
-                margin: 0; 
-                -webkit-print-color-adjust: exact !important; 
-                print-color-adjust: exact !important; 
-            }
-            @page { size: A4 portrait; margin: 6mm 8mm; }
-            .print-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
-            .print-card { border: 1px solid #e5e7eb !important; page-break-inside: avoid; }
-            
-            .session-odd, .session-even, .bg-legal, .bg-academy, .bg-prep {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-        }
     </style>
 </head>
 <body class="bg-gray-50 p-4">
 
-    <div class="no-print max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 관리자 모드</h2>
+    <div class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
+        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러 (독립 팝업 인쇄 모듈)</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작)</label>
@@ -59,7 +38,7 @@
             </div>
             <div class="flex gap-2 items-end">
                 <button onclick="saveToFirebase()" class="w-1/2 bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 cursor-pointer">💾 서버 저장</button>
-                <button onclick="window.print()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 스케줄 인쇄</button>
+                <button onclick="printScheduler()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 스케줄 인쇄</button>
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -78,7 +57,7 @@
         </div>
     </div>
 
-    <div id="printArea" class="max-w-7xl mx-auto bg-white p-2">
+    <div id="printArea" class="max-w-7xl mx-auto bg-white p-4 rounded-xl shadow-md border border-gray-200">
         <h1 id="mainTitle" class="text-4xl font-black text-center mb-6 tracking-tight">2026 CLASS SCHEDULE</h1>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-b-2 border-black pb-3">
@@ -99,7 +78,7 @@
             </div>
         </div>
 
-        <div id="calendarGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print-grid">
+        <div id="calendarGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             </div>
 
         <div class="mt-6 pt-4 border-t-2 border-black text-xs font-bold space-y-1">
@@ -115,8 +94,7 @@
         const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_continuous.json";
 
         const defaultData = {
-            baseYear: 2026,
-            selectedDays: [2, 4],
+            baseYear: 2026, selectedDays: [2, 4],
             legal: [
                 "2026-03-02 : 삼일절 대체휴일", "2026-05-05 : 어린이날", "2026-05-25 : 부처님오신날 대체", 
                 "2026-06-06 : 현충일", "2026-08-17 : 광복절 대체휴일", 
@@ -152,8 +130,7 @@
                         document.getElementById('chk_thu').checked = targetDays.includes(4);
                         document.getElementById('chk_fri').checked = targetDays.includes(5);
 
-                        calculateSchedule();
-                        return;
+                        calculateSchedule(); return;
                     }
                 }
                 initDefault();
@@ -171,8 +148,7 @@
         async function saveToFirebase() {
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(cb => parseInt(cb.value));
             const payload = {
-                baseYear: parseInt(document.getElementById('baseYear').value),
-                selectedDays: selectedDays,
+                baseYear: parseInt(document.getElementById('baseYear').value), selectedDays: selectedDays,
                 legal: document.getElementById('legalHolidays').value.split('\n').filter(v => v.trim()),
                 academy: document.getElementById('academyHolidays').value.split('\n').filter(v => v.trim()),
                 prep: document.getElementById('prepDays').value.split('\n').filter(v => v.trim())
@@ -186,8 +162,7 @@
         function parseHolidayLines(id, baseYear) {
             const lines = document.getElementById(id).value.split('\n');
             const map = {}; const rawList = [];
-            const minDate = new Date(baseYear, 2, 1);
-            const maxDate = new Date(baseYear + 1, 2, 0);
+            const minDate = new Date(baseYear, 2, 1); const maxDate = new Date(baseYear + 1, 2, 0);
 
             lines.forEach(line => {
                 if(!line.includes(':')) return;
@@ -234,13 +209,11 @@
             document.getElementById('mainTitle').innerText = `${baseYear} CLASS SCHEDULE`;
 
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
-            
-            // ⚠️ [수업 요일 출력 변경 로직 고도화]: 원장님 요청에 따른 요일 매칭 포맷 보정
             const weekNames = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금'};
             const engNames = {1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri'};
             
-            const korPart = selectedDays.map(d => weekNames[d]).join('.'); // 예: 화.목
-            const engPart = selectedDays.map(d => engNames[d]).join('/');  // 예: Tue/Thu
+            const korPart = selectedDays.map(d => weekNames[d]).join('.');
+            const engPart = selectedDays.map(d => engNames[d]).join('/');  
             document.getElementById('displayDays').innerText = `수업 요일 : ${korPart}(${engPart})`;
 
             const sessionCutCount = (selectedDays.length === 1) ? 4 : 8;
@@ -251,8 +224,7 @@
             const prep = parseHolidayLines('prepDays', baseYear);
 
             let globalClassDays = [];
-            let startDate = new Date(baseYear, 2, 1);
-            let endDate = new Date(baseYear + 1, 2, 0);
+            let startDate = new Date(baseYear, 2, 1); let endDate = new Date(baseYear + 1, 2, 0);
 
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                 const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curD = d.getDate();
@@ -264,7 +236,6 @@
                 }
             }
 
-            // 2월 마지막 달 몰아주기 연산 빌더
             let sessions = []; let currentSession = [];
             globalClassDays.forEach((day, index) => {
                 currentSession.push(day);
@@ -281,27 +252,16 @@
             sessions.forEach((session, sIdx) => {
                 const sessionNum = sIdx + 1;
                 const colorClass = (sessionNum % 2 !== 0) ? "session-odd" : "session-even";
-                
-                const firstDay = session[0];
-                const lastDay = session[session.length - 1];
+                const firstDay = session[0]; const lastDay = session[session.length - 1];
                 const infoText = `${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`;
 
                 session.forEach(day => {
                     dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
-                    
                     if (!monthBannerInfo[day.month]) {
-                        monthBannerInfo[day.month] = {
-                            text: `${day.month}월 기간: ` + infoText,
-                            bgClass: colorClass,
-                            count: session.length
-                        };
+                        monthBannerInfo[day.month] = { text: `${day.month}월 기간: ` + infoText, bgClass: colorClass, count: session.length };
                     }
                     if (day.month === 2) {
-                        monthBannerInfo[2] = {
-                            text: `2월 기간: ` + infoText,
-                            bgClass: colorClass,
-                            count: session.length
-                        };
+                        monthBannerInfo[2] = { text: `2월 기간: ` + infoText, bgClass: colorClass, count: session.length };
                     }
                 });
             });
@@ -315,7 +275,6 @@
             for (let i = 0; i < 12; i++) {
                 const month = (i + 2) % 12 + 1;
                 const currYear = (month < 3) ? baseYear + 1 : baseYear;
-                
                 const firstDayIdx = new Date(currYear, month - 1, 1).getDay();
                 const lastDateNum = new Date(currYear, month, 0).getDate();
                 const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200" };
@@ -369,6 +328,62 @@
                     </div>`;
                 grid.innerHTML += html;
             }
+        }
+
+        // ⚠️ [핵심 추가]: 오리지널 화면 파괴 없이 완전히 독립된 새 창을 만들어 출력하는 고정 모듈
+        function printScheduler() {
+            const contents = document.getElementById("printArea").innerHTML;
+            const printWindow = window.open("", "_blank", "width=1100,height=850");
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>CLASS SCHEDULE PRINT</title>
+                    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>
+                    <style>
+                        body { background: white; font-family: sans-serif; padding: 10px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                        .sat { color: #2563eb !important; }
+                        .sun { color: #dc2626 !important; }
+                        .session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }
+                        .session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6 !important; }
+                        .bg-legal { background-color: #71717a !important; color: white !important; }
+                        .bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; }
+                        .bg-prep { background-color: #a1a1aa !important; color: white !important; }
+                        
+                        /* A4 용지 4열 맞춤형 그리드 오버라이드 고정 */
+                        .print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
+                        .print-card-layout { border: 1px solid #e5e7eb !important; page-break-inside: avoid; }
+                        
+                        @media print {
+                            @page { size: A4 portrait; margin: 6mm 8mm; }
+                            body { padding: 0; margin: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="max-w-7xl mx-auto">
+                        \${contents}
+                    </div>
+                    <script>
+                        // 클래스명 유실 대항 치환 처리
+                        const grid = document.querySelector("#calendarGrid");
+                        if(grid) {
+                            grid.className = "print-grid-layout";
+                            const cards = grid.querySelectorAll(".print-card");
+                            cards.forEach(c => c.className += " print-card-layout");
+                        }
+                        
+                        // 문서 로드 완료 시 인쇄창 실행 후 자동 종료
+                        window.parent.setTimeout(() => {
+                            window.print();
+                            window.close();
+                        }, 400);
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
         }
     </script>
 </body>
