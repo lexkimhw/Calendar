@@ -407,7 +407,6 @@
 
                 html += `</tr></tbody></table></div>`;
 
-                // Progress Report 바인딩 분할 구조화
                 let reportNoticeHtml = "";
                 if (month === 8) {
                     reportNoticeHtml = `
@@ -446,8 +445,8 @@
 
         function printScheduler() {
             const isTeacherMode = document.getElementById("teacherModeCheck").checked;
+            const mainTitleEl = document.getElementById("mainTitle");
             
-            // 임시로 DOM을 변경한 뒤에 innerHTML을 가져와 프린트 윈도우에 전달합니다.
             if(isTeacherMode) {
                 document.getElementById("lblLegal").innerText = "National Holidays";
                 document.getElementById("lblAcademy").innerText = "School Vacations";
@@ -456,7 +455,9 @@
                 document.getElementById("displayDaysWrapper").style.display = "none";
                 document.getElementById("printFooter").style.display = "none";
                 
-                // 각 달력 카드 내의 요소 제어
+                // 선생님 버전 인쇄 시 메인 타이틀 하단 여백 추가용 클래스 지정
+                mainTitleEl.classList.add("teacher-print-gap");
+
                 document.querySelectorAll(".standard-banner").forEach(el => el.style.display = "none");
                 document.querySelectorAll(".teacher-banner").forEach(el => el.style.display = "block");
                 document.querySelectorAll(".standard-report").forEach(el => el.style.display = "none");
@@ -466,13 +467,15 @@
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
-            // DOM 롤백 (화면 표시용 원상 복구)
+            // DOM 복구
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
             document.getElementById("feePaymentNotice").style.display = "block";
             document.getElementById("displayDaysWrapper").style.display = "block";
             document.getElementById("printFooter").style.display = "block";
+            mainTitleEl.classList.remove("teacher-print-gap");
+            
             document.querySelectorAll(".standard-banner").forEach(el => el.style.display = "block");
             document.querySelectorAll(".teacher-banner").forEach(el => el.style.display = "none");
             document.querySelectorAll(".standard-report").forEach(el => el.style.display = "block");
@@ -485,14 +488,15 @@
                 '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>' +
                 '<style>' +
                 'body { background: white; font-family: sans-serif; padding: 2mm; margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; overflow: hidden; }' +
-                'h1 { margin-bottom: 8px !important; font-size: 1.8rem !important; line-height: 1 !important; }' +
+                'h1 { font-size: 1.8rem !important; line-height: 1 !important; margin-bottom: 24px !important; }' +
+                '.teacher-print-gap { margin-bottom: 35px !important; }' + // 선생님 모드 시 타이틀 하단 간격 추가 보정
                 '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
                 '.session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }' +
                 '.session-even { background-color: #ffbbee !important; color: black !important; border: 1px solid #f472b6 !important; }' +
                 '.bg-legal { background-color: #71717a !important; color: white !important; }' +
                 '.bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; }' +
                 '.bg-prep { background-color: #a1a1aa !important; color: white !important; }' +
-                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px !important; }' +
+                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 20px !important; }' + // 행간(row-gap) 확대 적용
                 '.print-card-layout { border: 1px solid #d1d5db !important; padding: 4px !important; border-radius: 4px !important; page-break-inside: avoid; background-color: white !important; }' +
                 'table { font-size: 8.5px !important; }' +
                 'td div { height: 16px !important; width: 16px !important; font-size: 8.5px !important; line-height: 16px !important; margin: auto; }' +
