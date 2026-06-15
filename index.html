@@ -44,8 +44,7 @@
 
         <div class="mb-4 p-4 bg-gray-100 rounded-lg border border-gray-300">
             <label class="block text-xs font-bold text-gray-800 mb-2">📅 특정 달만 수강 횟수 개별 변경 설정</label>
-            <div id="monthCustomContainer" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-2 text-center">
-                </div>
+            <div id="monthCustomContainer" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-2 text-center"></div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -100,13 +99,11 @@
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
 
-        // 페이지 최초 로드 시 월별 입력 UI 생성 후 조회 시작
         window.onload = async () => {
             initMonthCustomUI();
             await loadFromFirebase();
         };
 
-        // 월별 커스텀 횟수 입력 컴포넌트 생성
         function initMonthCustomUI() {
             const container = document.getElementById('monthCustomContainer');
             container.innerHTML = '';
@@ -174,7 +171,6 @@
                         document.getElementById('chk_thu').checked = targetDays.includes(4);
                         document.getElementById('chk_fri').checked = targetDays.includes(5);
 
-                        // 월별 개별설정 서버 로드 반영
                         if(data.customCounts) {
                             monthsOrder.forEach(m => {
                                 if(data.customCounts[m]) {
@@ -200,10 +196,8 @@
         async function saveToFirebase() {
             const currentYear = document.getElementById('baseYear').value;
             const targetUrl = `${DB_BASE_URL}/${currentYear}.json`;
-
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(cb => parseInt(cb.value));
             
-            // 커스텀 횟수 객체 구조 빌드
             const customCounts = {};
             monthsOrder.forEach(m => {
                 if(document.getElementById(`chk_custom_${m}`).checked) {
@@ -302,16 +296,13 @@
                 }
             }
 
-            // 개별 지정 변경 로직을 반영한 유연한 세션 분할 알고리즘 구현
+            // 개별 지정월 세션 분할 매칭 처리
             let sessions = []; let currentSession = [];
-            let sessionNumCounter = 1;
-
             let idx = 0;
             while(idx < globalClassDays.length) {
                 const day = globalClassDays[idx];
                 currentSession.push(day);
 
-                // 현재 담고 있는 세션의 첫 번째 날짜가 속한 월을 기준으로 컷 카운트 산출
                 const sessionStartMonth = currentSession[0].month;
                 const isCustom = document.getElementById(`chk_custom_${sessionStartMonth}`).checked;
                 const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${sessionStartMonth}`).value) || defaultCutCount) : defaultCutCount;
@@ -326,26 +317,41 @@
             }
             if (currentSession.length > 0) sessions.push(currentSession);
 
-            const dateStyleMap = {}; const monthBannerInfo = {}; 
+            const dateStyleMap = {}; 
+            // 실시간 상단 배너 표시 데이터 맵 정의
+            const monthBannerInfo = {}; 
 
             sessions.forEach((session, sIdx) => {
                 const sessionNum = sIdx + 1;
                 const colorClass = (sessionNum % 2 !== 0) ? "session-odd" : "session-even";
-                const firstDay = session[0]; const lastDay = session[session.length - 1];
-                const infoText = `${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`;
-
                 session.forEach(day => {
                     dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
-                    if (!monthBannerInfo[day.month]) {
-                        monthBannerInfo[day.month] = { text: `${day.month}월 기간: ` + infoText, bgClass: colorClass, count: session.length };
-                    }
-                    if (day.month === 2) {
-                        monthBannerInfo[2] = { text: `2월 기간: ` + infoText, bgClass: colorClass, count: session.length };
-                    }
                 });
             });
 
-            // 푸터 체크 알림
+            // 각 월별 달력 카드 상단 배너 텍스트 실시간 정렬
+            monthsOrder.forEach(m => {
+                const daysInThisMonth = globalClassDays.filter(d => d.month === m);
+                if (daysInThisMonth.length > 0) {
+                    const firstDay = daysInThisMonth[0];
+                    const lastDay = daysInThisMonth[daysInThisMonth.length - 1];
+                    const count = daysInThisMonth.length;
+                    
+                    // 해당 월의 첫날 세션 정보를 바탕으로 배너 배경색 동적 매칭
+                    const dKey = `${firstDay.year}-${String(firstDay.month).padStart(2,'0')}-${String(firstDay.dateNum).padStart(2,'0')}`;
+                    const bgClass = (dateStyleMap[dKey] && dateStyleMap[dKey].colorClass) ? dateStyleMap[dKey].colorClass : "bg-gray-200";
+
+                    monthBannerInfo[m] = {
+                        text: `${m}월 기간: ${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${count}회)`,
+                        bgClass: bgClass,
+                        count: count
+                    };
+                } else {
+                    monthBannerInfo[m] = { text: `${m}월 기간: 수업 없음`, bgClass: "bg-gray-200", count: 0 };
+                }
+            });
+
+            // 하단 안내 알림 경고 최적화
             let alertMsg = "※ 매월 20일 수강료 안내";
             let customCheckedMonths = [];
             monthsOrder.forEach(m => {
