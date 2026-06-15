@@ -69,7 +69,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-b-2 border-black pb-3">
             <div class="space-y-1">
                 <div id="displayDays" class="text-2xl font-black text-gray-900">수업 요일 : 화.목(Tue/Thu)</div>
-                <div id="sessionNotice" class="text-xs font-bold text-green-700">** 한달 수강료 기준 연속 매칭 처리됩니다.</div>
+                <div id="sessionNotice" class="text-xs font-bold text-green-700">** 한달 수강료 기준 연속 롤링 매칭 처리됩니다.</div>
             </div>
             
             <div class="flex flex-col space-y-2 justify-self-start md:justify-self-end w-full max-w-md">
@@ -296,25 +296,30 @@
                 }
             }
 
-            // [개선 핵심] 순차적 캘린더 배너 고정 및 누적 가변 롤링 슬라이스 알고리즘
+            // [핵심 변경] 연도 경계조건 완벽 대응 롤링 알고리즘
             let sessions = [];
             let tempDays = [...globalClassDays];
-            let lastAssignedMonth = 2; // 이전 배너 위치 추적
+            let lastAssignedMonth = 2; 
 
             while(tempDays.length > 0) {
                 const firstDayOfSession = tempDays[0];
                 let currentTargetMonth = firstDayOfSession.month;
 
-                // 직전 세션이 이미 해당 월 배너를 채웠다면 자연스럽게 다음 달 배너로 넘김
                 if (currentTargetMonth === lastAssignedMonth) {
                     currentTargetMonth = (currentTargetMonth % 12) + 1;
                 }
 
-                const isCustom = document.getElementById(`chk_custom_${currentTargetMonth}`)?.checked;
-                const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${currentTargetMonth}`).value) || defaultCutCount) : defaultCutCount;
+                // 2월 세션의 경우 남은 모든 수업일을 한 세션으로 일괄 바인딩 (자동 잔여 마감 처리)
+                let currentCutLimit = defaultCutCount;
+                if (currentTargetMonth === 2) {
+                    currentCutLimit = tempDays.length; 
+                } else {
+                    const isCustom = document.getElementById(`chk_custom_${currentTargetMonth}`)?.checked;
+                    currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${currentTargetMonth}`).value) || defaultCutCount) : defaultCutCount;
+                }
 
                 const currentSession = tempDays.splice(0, currentCutLimit);
-                currentSession.targetMonth = currentTargetMonth; // 세션의 고유 목표 배너월 강제 부여
+                currentSession.targetMonth = currentTargetMonth;
                 sessions.push(currentSession);
 
                 lastAssignedMonth = currentTargetMonth;
@@ -334,7 +339,7 @@
                 
                 const firstDay = session[0]; 
                 const lastDay = session[session.length - 1];
-                const bannerMonth = session.targetMonth; // 강제 바인딩된 월 기준으로 배너 생성
+                const bannerMonth = session.targetMonth; 
 
                 session.forEach(day => {
                     dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
@@ -357,8 +362,9 @@
                     customCheckedMonths.push(`${m}월(${cnt}회)`);
                 }
             });
-            if (customCheckedMonths.length > 0) {
-                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ')}) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
+            const febCount = monthBannerInfo[2]?.count || 0;
+            if (customCheckedMonths.length > 0 || febCount !== defaultCutCount) {
+                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ') || '없음'}) 및 2월 마감 회차(${febCount}회) 수강료가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
             }
             document.getElementById('alertFooter').innerText = alertMsg;
 
