@@ -41,6 +41,13 @@
                 <button onclick="printScheduler()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 스케줄 인쇄</button>
             </div>
         </div>
+
+        <div class="mb-4 p-4 bg-gray-100 rounded-lg border border-gray-300">
+            <label class="block text-xs font-bold text-gray-800 mb-2">📅 특정 달만 수강 횟수 개별 변경 설정</label>
+            <div id="monthCustomContainer" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-2 text-center">
+                </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">법정 공휴일 (YYYY-MM-DD : 명칭)</label>
@@ -91,10 +98,43 @@
 
     <script>
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
+        const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
 
+        // 페이지 최초 로드 시 월별 입력 UI 생성 후 조회 시작
         window.onload = async () => {
+            initMonthCustomUI();
             await loadFromFirebase();
         };
+
+        // 월별 커스텀 횟수 입력 컴포넌트 생성
+        function initMonthCustomUI() {
+            const container = document.getElementById('monthCustomContainer');
+            container.innerHTML = '';
+            monthsOrder.forEach(m => {
+                container.innerHTML += `
+                    <div class="bg-white p-1.5 rounded border border-gray-300 shadow-xs flex flex-col items-center">
+                        <span class="text-[11px] font-bold block mb-1 text-gray-700">${m}월</span>
+                        <input type="checkbox" id="chk_custom_${m}" class="month-custom-toggle mb-1" onchange="toggleMonthInput(${m})">
+                        <input type="number" id="input_custom_${m}" disabled min="1" max="20" value="8" 
+                            class="w-12 border text-center text-xs p-0.5 rounded font-bold bg-gray-100" onchange="calculateSchedule()">
+                    </div>`;
+            });
+        }
+
+        function toggleMonthInput(m) {
+            const chk = document.getElementById(`chk_custom_${m}`);
+            const input = document.getElementById(`input_custom_${m}`);
+            if(chk.checked) {
+                input.disabled = false;
+                input.classList.remove('bg-gray-100');
+                input.classList.add('bg-amber-50', 'border-amber-400');
+            } else {
+                input.disabled = true;
+                input.classList.remove('bg-amber-50', 'border-amber-400');
+                input.classList.add('bg-gray-100');
+            }
+            calculateSchedule();
+        }
 
         async function handleYearChange() {
             clearInputs();
@@ -105,6 +145,13 @@
             document.getElementById('legalHolidays').value = '';
             document.getElementById('academyHolidays').value = '';
             document.getElementById('prepDays').value = '';
+            monthsOrder.forEach(m => {
+                document.getElementById(`chk_custom_${m}`).checked = false;
+                const input = document.getElementById(`input_custom_${m}`);
+                input.disabled = true;
+                input.value = 8;
+                input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-gray-100";
+            });
         }
 
         async function loadFromFirebase() {
@@ -126,6 +173,19 @@
                         document.getElementById('chk_wed').checked = targetDays.includes(3);
                         document.getElementById('chk_thu').checked = targetDays.includes(4);
                         document.getElementById('chk_fri').checked = targetDays.includes(5);
+
+                        // 월별 개별설정 서버 로드 반영
+                        if(data.customCounts) {
+                            monthsOrder.forEach(m => {
+                                if(data.customCounts[m]) {
+                                    document.getElementById(`chk_custom_${m}`).checked = true;
+                                    const input = document.getElementById(`input_custom_${m}`);
+                                    input.disabled = false;
+                                    input.value = data.customCounts[m];
+                                    input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-amber-50 border-amber-400";
+                                }
+                            });
+                        }
                     } else {
                         clearInputs();
                     }
@@ -142,16 +202,26 @@
             const targetUrl = `${DB_BASE_URL}/${currentYear}.json`;
 
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(cb => parseInt(cb.value));
+            
+            // 커스텀 횟수 객체 구조 빌드
+            const customCounts = {};
+            monthsOrder.forEach(m => {
+                if(document.getElementById(`chk_custom_${m}`).checked) {
+                    customCounts[m] = parseInt(document.getElementById(`input_custom_${m}`).value) || 8;
+                }
+            });
+
             const payload = {
                 baseYear: parseInt(currentYear), 
                 selectedDays: selectedDays,
+                customCounts: customCounts,
                 legal: document.getElementById('legalHolidays').value.split('\n').filter(v => v.trim()),
                 academy: document.getElementById('academyHolidays').value.split('\n').filter(v => v.trim()),
                 prep: document.getElementById('prepDays').value.split('\n').filter(v => v.trim())
             };
             try {
                 await fetch(targetUrl, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                alert(`✅ ${currentYear}년 학원 설정 데이터가 새 서버에 안전하게 저장되었습니다.`);
+                alert(`✅ ${currentYear}년 학원 설정 및 월별 지정 회차 데이터가 안전하게 저장되었습니다.`);
             } catch(e) { alert('❌ 저장 실패'); }
         }
 
@@ -212,8 +282,8 @@
             const engPart = selectedDays.map(d => engNames[d]).join('/');  
             document.getElementById('displayDays').innerText = `수업 요일 : ${korPart}(${engPart})`;
 
-            const sessionCutCount = (selectedDays.length === 1) ? 4 : 8;
-            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 연속 ${sessionCutCount}회 단위 세션 회차 정산)`;
+            const defaultCutCount = (selectedDays.length === 1) ? 4 : 8;
+            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 기본 ${defaultCutCount}회 단위 세션 정산)`;
 
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
@@ -232,15 +302,28 @@
                 }
             }
 
+            // 개별 지정 변경 로직을 반영한 유연한 세션 분할 알고리즘 구현
             let sessions = []; let currentSession = [];
-            globalClassDays.forEach((day, index) => {
+            let sessionNumCounter = 1;
+
+            let idx = 0;
+            while(idx < globalClassDays.length) {
+                const day = globalClassDays[idx];
                 currentSession.push(day);
+
+                // 현재 담고 있는 세션의 첫 번째 날짜가 속한 월을 기준으로 컷 카운트 산출
+                const sessionStartMonth = currentSession[0].month;
+                const isCustom = document.getElementById(`chk_custom_${sessionStartMonth}`).checked;
+                const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${sessionStartMonth}`).value) || defaultCutCount) : defaultCutCount;
+
                 const isFinalMonth = (day.year === baseYear + 1 && day.month === 2);
-                if (!isFinalMonth && currentSession.length === sessionCutCount && index < globalClassDays.length - 1) {
+
+                if (!isFinalMonth && currentSession.length === currentCutLimit) {
                     sessions.push(currentSession);
                     currentSession = [];
                 }
-            });
+                idx++;
+            }
             if (currentSession.length > 0) sessions.push(currentSession);
 
             const dateStyleMap = {}; const monthBannerInfo = {}; 
@@ -262,12 +345,17 @@
                 });
             });
 
+            // 푸터 체크 알림
+            let alertMsg = "※ 매월 20일 수강료 안내";
+            let customCheckedMonths = [];
+            monthsOrder.forEach(m => {
+                if(document.getElementById(`chk_custom_${m}`).checked) customCheckedMonths.push(`${m}월`);
+            });
             const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
-            if (febFinalCount === sessionCutCount) {
-                document.getElementById('alertFooter').innerText = `※ 매월 20일 수강료 안내`;
-            } else {
-                document.getElementById('alertFooter').innerText = `※ 2월(${febFinalCount}회) 수강료 횟수가 다르오니 확인 부탁 드립니다. (매월 20일 수강료 안내)`;
+            if (customCheckedMonths.length > 0 || febFinalCount !== defaultCutCount) {
+                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ') || '없음'}) 및 2월(${febFinalCount}회) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
             }
+            document.getElementById('alertFooter').innerText = alertMsg;
 
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
@@ -373,7 +461,6 @@
                 '  const cards = grid.querySelectorAll(".print-card");' +
                 '  cards.forEach(c => c.className = "print-card-layout flex flex-col justify-between");' +
                 '}' +
-                // 인쇄 시에도 flex-justify 구조 강제 연동
                 'const footerRow = document.querySelector("#printFooter > div");' +
                 'if(footerRow) footerRow.className = "flex-justify";' +
                 'setTimeout(function(){ window.print(); window.close(); }, 500);' +
