@@ -90,72 +90,75 @@
     </div>
 
     <script>
-        const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_continuous.json";
+        // 개별 연도 노드로 데이터를 분리하기 위해 기본 URL을 폴더 경로 형태로 설정합니다.
+        const DB_BASE_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
 
-        // 최초 페이지 로딩 시 서버 데이터 조회
+        // 최초 로딩 시 설정된 연도의 데이터를 가져옴
         window.onload = async () => {
             await loadFromFirebase();
         };
 
-        // 기준 연도 인풋창 값이 변경될 때 실행되는 제어 함수
+        // 연도 변경 시 즉시 변경된 연도의 데이터를 조회해옴
         async function handleYearChange() {
             clearInputs();
             await loadFromFirebase();
         }
 
-        // 입력 폼을 깨끗하게 비우는 함수
         function clearInputs() {
             document.getElementById('legalHolidays').value = '';
             document.getElementById('academyHolidays').value = '';
             document.getElementById('prepDays').value = '';
         }
 
-        // 파이어베이스에서 데이터를 받아와 연도가 맞으면 매칭하고 스케줄을 그리는 핵심 함수
+        // 특정 연도에 매칭되는 데이터를 가져오는 로직
         async function loadFromFirebase() {
+            const currentYear = document.getElementById('baseYear').value;
+            // 예: .../schedules/2026.json 형태로 연도별 독립 요청 수행
+            const targetUrl = `${DB_BASE_URL}/${currentYear}.json`;
+
             try {
-                const res = await fetch(DB_URL);
+                const res = await fetch(targetUrl);
                 if (res.ok) {
                     const data = await res.json();
                     if (data) {
-                        const currentInputYear = parseInt(document.getElementById('baseYear').value);
+                        document.getElementById('legalHolidays').value = (data.legal || []).join('\n');
+                        document.getElementById('academyHolidays').value = (data.academy || []).join('\n');
+                        document.getElementById('prepDays').value = (data.prep || []).join('\n');
                         
-                        // 서버에 저장된 baseYear와 현재 UI에 입력된 숫자가 일치할 때만 바인딩
-                        if (data.baseYear === currentInputYear) {
-                            document.getElementById('legalHolidays').value = (data.legal || []).join('\n');
-                            document.getElementById('academyHolidays').value = (data.academy || []).join('\n');
-                            document.getElementById('prepDays').value = (data.prep || []).join('\n');
-                            
-                            const targetDays = data.selectedDays || [2, 4];
-                            document.getElementById('chk_mon').checked = targetDays.includes(1);
-                            document.getElementById('chk_tue').checked = targetDays.includes(2);
-                            document.getElementById('chk_wed').checked = targetDays.includes(3);
-                            document.getElementById('chk_thu').checked = targetDays.includes(4);
-                            document.getElementById('chk_fri').checked = targetDays.includes(5);
-                        } else {
-                            // 연도가 일치하지 않는다면 다른 데이터이므로 빈 창 유지
-                            clearInputs();
-                        }
+                        const targetDays = data.selectedDays || [2, 4];
+                        document.getElementById('chk_mon').checked = targetDays.includes(1);
+                        document.getElementById('chk_tue').checked = targetDays.includes(2);
+                        document.getElementById('chk_wed').checked = targetDays.includes(3);
+                        document.getElementById('chk_thu').checked = targetDays.includes(4);
+                        document.getElementById('chk_fri').checked = targetDays.includes(5);
+                    } else {
+                        // 해당 연도에 저장된 이력이 없으면 빈 값 유지
+                        clearInputs();
                     }
                 }
             } catch(e) { 
                 console.error("데이터 로딩 실패:", e);
                 clearInputs(); 
             }
-            // 불러오기(또는 리셋) 작업이 끝난 후 최종 스케줄러 재계산 및 드로잉
             calculateSchedule();
         }
 
+        // 저장 시에도 연도별 경로에 개별 저장되도록 수정
         async function saveToFirebase() {
+            const currentYear = document.getElementById('baseYear').value;
+            const targetUrl = `${DB_BASE_URL}/${currentYear}.json`;
+
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(cb => parseInt(cb.value));
             const payload = {
-                baseYear: parseInt(document.getElementById('baseYear').value), selectedDays: selectedDays,
+                baseYear: parseInt(currentYear), 
+                selectedDays: selectedDays,
                 legal: document.getElementById('legalHolidays').value.split('\n').filter(v => v.trim()),
                 academy: document.getElementById('academyHolidays').value.split('\n').filter(v => v.trim()),
                 prep: document.getElementById('prepDays').value.split('\n').filter(v => v.trim())
             };
             try {
-                await fetch(DB_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                alert('✅ 학원 맞춤형 스케줄 설정이 실시간 DB에 안전하게 저장되었습니다.');
+                await fetch(targetUrl, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                alert(`✅ ${currentYear}년 학원 맞춤형 스케줄 설정이 서버에 안전하게 저장되었습니다.`);
             } catch(e) { alert('❌ 저장 실패'); }
         }
 
@@ -383,4 +386,4 @@
         }
     </script>
 </body>
-</html>
+</html>>
