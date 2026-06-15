@@ -36,9 +36,14 @@
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="5" id="chk_fri" onchange="calculateSchedule()"> 금</label>
                 </div>
             </div>
-            <div class="flex gap-2 items-end">
-                <button onclick="saveToFirebase()" class="w-1/2 bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 cursor-pointer">💾 서버 저장</button>
-                <button onclick="printScheduler()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 스케줄 인쇄</button>
+            <div class="flex flex-col justify-end">
+                <label class="flex items-center gap-2 mb-2 font-bold text-sm text-blue-700 cursor-pointer select-none">
+                    <input type="checkbox" id="teacherModeCheck" class="w-4 h-4 accent-blue-600"> 🧑‍🏫 선생님용 인쇄 버전으로 전환
+                </label>
+                <div class="flex gap-2">
+                    <button onclick="saveToFirebase()" class="w-1/2 bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 cursor-pointer">💾 서버 저장</button>
+                    <button onclick="printScheduler()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 스케줄 인쇄</button>
+                </div>
             </div>
         </div>
 
@@ -58,7 +63,7 @@
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">Prep Day (YYYY-MM-DD : 명칭)</label>
-                <textarea id="prepDays" class="w-full h-32 border p-2 text-xs font-mono rounded placeholder-gray-400" placeholder="예시) 2027-03-02 : Prep Day" oninput="calculateSchedule()"></textarea>
+                <textarea id="prepDays" class="w-full h-32 border p-2 text-xs font-mono rounded placeholder-gray-400" placeholder="예시) 2026-05-01 : Prep Day" oninput="calculateSchedule()"></textarea>
             </div>
         </div>
     </div>
@@ -66,23 +71,24 @@
     <div id="printArea" class="max-w-7xl mx-auto bg-white p-4 rounded-xl shadow-md border border-gray-200">
         <h1 id="mainTitle" class="text-4xl font-black text-center mb-12 tracking-tight">2026 CLASS SCHEDULE</h1>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-b-2 border-black pb-3">
-            <div class="space-y-1">
+        <div id="printHeaderRow" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-b-2 border-black pb-3">
+            <div class="space-y-1" id="displayDaysWrapper">
                 <div id="displayDays" class="text-2xl font-black text-gray-900">수업 요일 : 화.목(Tue/Thu)</div>
+                <div id="sessionNotice" class="text-xs font-bold text-green-700">** 한달 수강료 기준 연속 매칭 처리됩니다.</div>
             </div>
             
             <div class="flex justify-between items-end w-full max-w-xl justify-self-start md:justify-self-end gap-4">
                 <div class="flex flex-col space-y-1 text-left">
                     <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-gray-800 justify-start mb-1">
-                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-legal border border-gray-500 mr-1.5 rounded-sm"></span> 법정 공휴일</div>
-                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-academy border border-yellow-600 mr-1.5 rounded-sm"></span> 학원 지정 휴일</div>
-                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-prep border border-gray-500 mr-1.5 rounded-sm"></span> Prep Day</div>
+                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-legal border border-gray-500 mr-1.5 rounded-sm"></span> <span id="lblLegal">법정 공휴일</span></div>
+                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-academy border border-yellow-600 mr-1.5 rounded-sm"></span> <span id="lblAcademy">학원 지정 휴일</span></div>
+                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-prep border border-gray-500 mr-1.5 rounded-sm"></span> <span>Prep Day</span></div>
                     </div>
-                    <div class="text-xs font-extrabold text-red-600 tracking-tight whitespace-nowrap">
+                    <div id="noClassNotice" class="text-xs font-extrabold text-red-600 tracking-tight whitespace-nowrap">
                         ※ 법정 공휴일, 학원 지정 휴일, Prep Day 모두 학원 수업 없습니다.
                     </div>
                 </div>
-                <div class="text-xs font-extrabold text-blue-700 tracking-tight text-right self-end pb-0.5 whitespace-nowrap">
+                <div id="feePaymentNotice" class="text-xs font-extrabold text-blue-700 tracking-tight text-right self-end pb-0.5 whitespace-nowrap">
                     수강료 납부 기간은 매월 25일부터 말일까지입니다.
                 </div>
             </div>
@@ -91,16 +97,20 @@
         <div id="calendarGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
 
         <div id="printFooter" class="mt-6 pt-4 border-t-2 border-black text-xs font-bold space-y-1">
-            <div class="flex justify-between items-baseline">
+            <div class="flex justify-between items-baseline" id="footerAlertRow">
                 <p id="alertFooter" class="text-red-600 text-xs font-bold tracking-tight"></p>
             </div>
-            <p>※ 휴강 일정과 특강 일정은 학원 사정에 따라 변경 될 수도 있음을 알려 드립니다.</p>
+            <p id="footerNoticeText">※ 휴강 일정과 특강 일정은 학원 사정에 따라 변경 될 수도 있음을 알려 드립니다.</p>
         </div>
     </div>
 
     <script>
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
+        const engMonthNames = {
+            1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
+            7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"
+        };
 
         window.onload = async () => {
             initMonthCustomUI();
@@ -280,14 +290,14 @@
             document.getElementById('displayDays').innerText = `수업 요일 : ${korPart}(${engPart})`;
 
             const defaultCutCount = (selectedDays.length === 1) ? 4 : 8;
+            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 기본 ${defaultCutCount}회 단위 세션 정산)`;
 
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
             const prep = parseHolidayLines('prepDays', baseYear);
 
             let globalClassDays = [];
-            let startDate = new Date(baseYear, 2, 1); 
-            let endDate = new Date(baseYear + 1, 2, 0);
+            let startDate = new Date(baseYear, 2, 1); let endDate = new Date(baseYear + 1, 2, 0);
 
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                 const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curM_day = d.getDate();
@@ -299,66 +309,52 @@
                 }
             }
 
-            let sessions = [];
-            let pool = [...globalClassDays];
-            let lastColorToggle = 1;
+            let sessions = []; let currentSession = [];
+            let idx = 0;
+            while(idx < globalClassDays.length) {
+                const day = globalClassDays[idx];
+                currentSession.push(day);
 
-            monthsOrder.forEach(m => {
-                if (pool.length === 0) return;
+                const sessionStartMonth = currentSession[0].month;
+                const isCustom = document.getElementById(`chk_custom_${sessionStartMonth}`).checked;
+                const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${sessionStartMonth}`).value) || defaultCutCount) : defaultCutCount;
+                const isFinalMonth = (day.year === baseYear + 1 && day.month === 2);
 
-                let limit = defaultCutCount;
-                if (m === 2) {
-                    limit = pool.length; 
-                } else {
-                    const isCustom = document.getElementById(`chk_custom_${m}`)?.checked;
-                    if (isCustom) {
-                        limit = parseInt(document.getElementById(`input_custom_${m}`).value) || defaultCutCount;
-                    }
-                }
-
-                const currentSession = pool.splice(0, limit);
-                if (currentSession.length > 0) {
-                    currentSession.targetMonth = m; 
-                    currentSession.sessionIndex = lastColorToggle++;
+                if (!isFinalMonth && currentSession.length === currentCutLimit) {
                     sessions.push(currentSession);
+                    currentSession = [];
                 }
-            });
+                idx++;
+            }
+            if (currentSession.length > 0) sessions.push(currentSession);
 
-            const dateStyleMap = {}; 
-            const monthBannerInfo = {}; 
+            const dateStyleMap = {}; const monthBannerInfo = {}; 
 
-            monthsOrder.forEach(m => {
-                monthBannerInfo[m] = { text: `${m}월 기간: 수업 없음`, bgClass: "bg-gray-200", count: 0 };
-            });
-
-            sessions.forEach(session => {
-                const colorClass = (session.sessionIndex % 2 !== 0) ? "session-odd" : "session-even";
-                const firstDay = session[0]; 
-                const lastDay = session[session.length - 1];
-                const bannerMonth = session.targetMonth;
+            sessions.forEach((session, sIdx) => {
+                const sessionNum = sIdx + 1;
+                const colorClass = (sessionNum % 2 !== 0) ? "session-odd" : "session-even";
+                const firstDay = session[0]; const lastDay = session[session.length - 1];
+                const infoText = `${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`;
 
                 session.forEach(day => {
-                    dateStyleMap[day.dateKey] = { colorClass: colorClass };
+                    dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
+                    if (!monthBannerInfo[day.month]) {
+                        monthBannerInfo[day.month] = { text: `${day.month}월 기간: ` + infoText, bgClass: colorClass, count: session.length };
+                    }
+                    if (day.month === 2) {
+                        monthBannerInfo[2] = { text: `2월 기간: ` + infoText, bgClass: colorClass, count: session.length };
+                    }
                 });
-
-                monthBannerInfo[bannerMonth] = {
-                    text: `${bannerMonth}월 기간: ${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`,
-                    bgClass: colorClass,
-                    count: session.length
-                };
             });
 
             let alertMsg = "※ 매월 20일 수강료 안내";
             let customCheckedMonths = [];
             monthsOrder.forEach(m => {
-                if(document.getElementById(`chk_custom_${m}`).checked) {
-                    const cnt = document.getElementById(`input_custom_${m}`).value;
-                    customCheckedMonths.push(`${m}월(${cnt}회)`);
-                }
+                if(document.getElementById(`chk_custom_${m}`).checked) customCheckedMonths.push(`${m}월`);
             });
-            const febCount = monthBannerInfo[2]?.count || 0;
-            if (customCheckedMonths.length > 0 || febCount !== defaultCutCount) {
-                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ') || '없음'}) 및 2월 마감 회차(${febCount}회) 수강료가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
+            const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
+            if (customCheckedMonths.length > 0 || febFinalCount !== defaultCutCount) {
+                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ') || '없음'}) 및 2월(${febFinalCount}회) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
             }
             document.getElementById('alertFooter').innerText = alertMsg;
 
@@ -370,12 +366,14 @@
                 const currYear = (month < 3) ? baseYear + 1 : baseYear;
                 const firstDayIdx = new Date(currYear, month - 1, 1).getDay();
                 const lastDateNum = new Date(currYear, month, 0).getDate();
-                const bInfo = monthBannerInfo[month];
+                const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200" };
 
                 let html = `
                     <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm">
                         <div>
-                            <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 rounded text-black mb-1.5">${bInfo.text}</div>
+                            <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 rounded text-black mb-1.5 standard-banner">${bInfo.text}</div>
+                            <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 rounded text-black mb-1.5 hidden teacher-banner">${engMonthNames[month]} ${currYear}</div>
+                            
                             <div class="text-center font-bold text-xs text-gray-600 mb-1">${currYear}년 ${month}월</div>
                             <table class="w-full text-[10px] text-center border-collapse">
                                 <thead>
@@ -409,13 +407,24 @@
 
                 html += `</tr></tbody></table></div>`;
 
+                // Progress Report 바인딩 분할 구조화
                 let reportNoticeHtml = "";
                 if (month === 8) {
-                    reportNoticeHtml = '<div class="mt-1 p-1 bg-red-50 text-[8.5px] font-extrabold text-red-600 leading-tight border border-red-200 rounded-sm text-center">' +
-                                       'Progress Report: 9월중 발송<br>(8월31일까지 재원생/신규생은 2달이상 수강한 학생 기준)</div>';
+                    reportNoticeHtml = `
+                        <div class="mt-1 p-1 bg-red-50 text-[8.5px] font-extrabold text-red-600 leading-tight border border-red-200 rounded-sm text-center standard-report">
+                            Progress Report: 9월중 발송<br>(8월31일까지 재원생/신규생은 2달이상 수강한 학생 기준)
+                        </div>
+                        <div class="mt-1 p-1 bg-red-50 text-[9px] font-black text-red-600 leading-tight border border-red-200 rounded-sm text-center hidden teacher-report">
+                            Progress Report Due Date: Aug. 21st
+                        </div>`;
                 } else if (month === 2) {
-                    reportNoticeHtml = '<div class="mt-1 p-1 bg-red-50 text-[8.5px] font-extrabold text-red-600 leading-tight border border-red-200 rounded-sm text-center">' +
-                                       'Progress Report: 3월중 발송<br>(2월말까지 재원생/신규생은 2달이상 수강한 학생 기준)</div>';
+                    reportNoticeHtml = `
+                        <div class="mt-1 p-1 bg-red-50 text-[8.5px] font-extrabold text-red-600 leading-tight border border-red-200 rounded-sm text-center standard-report">
+                            Progress Report: 3월중 발송<br>(2월말까지 재원생/신규생은 2달이상 수강한 학생 기준)
+                        </div>
+                        <div class="mt-1 p-1 bg-red-50 text-[9px] font-black text-red-600 leading-tight border border-red-200 rounded-sm text-center hidden teacher-report">
+                            Progress Report Due Date: Feb. 19th
+                        </div>`;
                 }
 
                 let infoArr = [];
@@ -426,7 +435,7 @@
                 html += `
                         <div>
                             ${reportNoticeHtml}
-                            <div class="mt-2 pt-1 text-[9.5px] font-bold text-gray-600 border-t border-dashed min-h-[30px]">
+                            <div class="mt-2 pt-1 text-[9.5px] font-bold text-gray-600 border-t border-dashed min-h-[30px] monthly-holiday-list">
                                 ${infoArr.map(t => `<div class="leading-tight text-gray-700">• ${t}</div>`).join('')}
                             </div>
                         </div>
@@ -436,7 +445,40 @@
         }
 
         function printScheduler() {
+            const isTeacherMode = document.getElementById("teacherModeCheck").checked;
+            
+            // 임시로 DOM을 변경한 뒤에 innerHTML을 가져와 프린트 윈도우에 전달합니다.
+            if(isTeacherMode) {
+                document.getElementById("lblLegal").innerText = "National Holidays";
+                document.getElementById("lblAcademy").innerText = "School Vacations";
+                document.getElementById("noClassNotice").style.display = "none";
+                document.getElementById("feePaymentNotice").style.display = "none";
+                document.getElementById("displayDaysWrapper").style.display = "none";
+                document.getElementById("printFooter").style.display = "none";
+                
+                // 각 달력 카드 내의 요소 제어
+                document.querySelectorAll(".standard-banner").forEach(el => el.style.display = "none");
+                document.querySelectorAll(".teacher-banner").forEach(el => el.style.display = "block");
+                document.querySelectorAll(".standard-report").forEach(el => el.style.display = "none");
+                document.querySelectorAll(".teacher-report").forEach(el => el.style.display = "block");
+                document.querySelectorAll(".monthly-holiday-list").forEach(el => el.style.display = "none");
+            }
+
             const htmlContent = document.getElementById("printArea").innerHTML;
+
+            // DOM 롤백 (화면 표시용 원상 복구)
+            document.getElementById("lblLegal").innerText = "법정 공휴일";
+            document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
+            document.getElementById("noClassNotice").style.display = "block";
+            document.getElementById("feePaymentNotice").style.display = "block";
+            document.getElementById("displayDaysWrapper").style.display = "block";
+            document.getElementById("printFooter").style.display = "block";
+            document.querySelectorAll(".standard-banner").forEach(el => el.style.display = "block");
+            document.querySelectorAll(".teacher-banner").forEach(el => el.style.display = "none");
+            document.querySelectorAll(".standard-report").forEach(el => el.style.display = "block");
+            document.querySelectorAll(".teacher-report").forEach(el => el.style.display = "none");
+            document.querySelectorAll(".monthly-holiday-list").forEach(el => el.style.display = "block");
+
             const printWindow = window.open("", "_blank", "width=1200,height=900");
             
             let template = '<!DOCTYPE html><html><head><title>CLASS SCHEDULE PRINT</title>' +
@@ -454,7 +496,7 @@
                 '.print-card-layout { border: 1px solid #d1d5db !important; padding: 4px !important; border-radius: 4px !important; page-break-inside: avoid; background-color: white !important; }' +
                 'table { font-size: 8.5px !important; }' +
                 'td div { height: 16px !important; width: 16px !important; font-size: 8.5px !important; line-height: 16px !important; margin: auto; }' +
-                '#printFooter { display: block !important; margin-top: 15px !important; border-top: 2px solid black !important; padding-top: 8px !important; }' +
+                '#printFooter { border-top: 2px solid black !important; padding-top: 8px !important; }' +
                 '.flex-justify { display: flex !important; justify-content: space-between !important; align-items: baseline !important; width: 100% !important; }' +
                 '@media print { @page { size: A4 portrait; margin: 4mm 5mm 4mm 5mm; } body { padding: 0; margin: 0; } }' +
                 '</style></head><body>' +
