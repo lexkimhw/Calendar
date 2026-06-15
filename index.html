@@ -64,23 +64,25 @@
     </div>
 
     <div id="printArea" class="max-w-7xl mx-auto bg-white p-4 rounded-xl shadow-md border border-gray-200">
-        <h1 id="mainTitle" class="text-4xl font-black text-center mb-6 tracking-tight">2026 CLASS SCHEDULE</h1>
+        <h1 id="mainTitle" class="text-4xl font-black text-center mb-12 tracking-tight">2026 CLASS SCHEDULE</h1>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-b-2 border-black pb-3">
             <div class="space-y-1">
                 <div id="displayDays" class="text-2xl font-black text-gray-900">수업 요일 : 화.목(Tue/Thu)</div>
             </div>
             
-            <div class="flex flex-col space-y-1 justify-self-start md:justify-self-end w-full max-w-md text-right">
-                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-gray-800 justify-start md:justify-end mb-1">
-                    <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-legal border border-gray-500 mr-1.5 rounded-sm"></span> 법정 공휴일</div>
-                    <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-academy border border-yellow-600 mr-1.5 rounded-sm"></span> 학원 지정 휴일</div>
-                    <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-prep border border-gray-500 mr-1.5 rounded-sm"></span> Prep Day</div>
+            <div class="flex justify-between items-end w-full max-w-xl justify-self-start md:justify-self-end gap-4">
+                <div class="flex flex-col space-y-1 text-left">
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-gray-800 justify-start mb-1">
+                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-legal border border-gray-500 mr-1.5 rounded-sm"></span> 법정 공휴일</div>
+                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-academy border border-yellow-600 mr-1.5 rounded-sm"></span> 학원 지정 휴일</div>
+                        <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-prep border border-gray-500 mr-1.5 rounded-sm"></span> Prep Day</div>
+                    </div>
+                    <div class="text-xs font-extrabold text-red-600 tracking-tight whitespace-nowrap">
+                        ※ 법정 공휴일, 학원 지정 휴일, Prep Day 모두 학원 수업 없습니다.
+                    </div>
                 </div>
-                <div class="text-xs font-extrabold text-red-600 tracking-tight">
-                    ※ 법정 공휴일, 학원 지정 휴일, Prep Day 모두 학원 수업 없습니다.
-                </div>
-                <div class="text-xs font-extrabold text-blue-700 tracking-tight">
+                <div class="text-xs font-extrabold text-blue-700 tracking-tight text-right self-end pb-0.5 whitespace-nowrap">
                     수강료 납부 기간은 매월 25일부터 말일까지입니다.
                 </div>
             </div>
