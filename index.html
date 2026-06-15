@@ -69,17 +69,19 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-b-2 border-black pb-3">
             <div class="space-y-1">
                 <div id="displayDays" class="text-2xl font-black text-gray-900">수업 요일 : 화.목(Tue/Thu)</div>
-                <div id="sessionNotice" class="text-xs font-bold text-green-700">** 한달 수강료 기준 연속 매칭 처리됩니다.</div>
             </div>
             
-            <div class="flex flex-col space-y-2 justify-self-start md:justify-self-end w-full max-w-md">
-                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-gray-800">
+            <div class="flex flex-col space-y-1 justify-self-start md:justify-self-end w-full max-w-md text-right">
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-gray-800 justify-start md:justify-end mb-1">
                     <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-legal border border-gray-500 mr-1.5 rounded-sm"></span> 법정 공휴일</div>
                     <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-academy border border-yellow-600 mr-1.5 rounded-sm"></span> 학원 지정 휴일</div>
                     <div class="flex items-center"><span class="inline-block w-5 h-3.5 bg-prep border border-gray-500 mr-1.5 rounded-sm"></span> Prep Day</div>
                 </div>
                 <div class="text-xs font-extrabold text-red-600 tracking-tight">
                     ※ 법정 공휴일, 학원 지정 휴일, Prep Day 모두 학원 수업 없습니다.
+                </div>
+                <div class="text-xs font-extrabold text-blue-700 tracking-tight">
+                    수강료 납부 기간은 매월 25일부터 말일까지입니다.
                 </div>
             </div>
         </div>
@@ -88,7 +90,6 @@
 
         <div id="printFooter" class="mt-6 pt-4 border-t-2 border-black text-xs font-bold space-y-1">
             <div class="flex justify-between items-baseline">
-                <p>※ 수강료 납부 기간은 매월 25일 부터 말일까지 입니다.</p>
                 <p id="alertFooter" class="text-red-600 text-xs font-bold tracking-tight"></p>
             </div>
             <p>※ 휴강 일정과 특강 일정은 학원 사정에 따라 변경 될 수도 있음을 알려 드립니다.</p>
@@ -277,13 +278,11 @@
             document.getElementById('displayDays').innerText = `수업 요일 : ${korPart}(${engPart})`;
 
             const defaultCutCount = (selectedDays.length === 1) ? 4 : 8;
-            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 연속 매칭 처리됩니다.`;
 
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
             const prep = parseHolidayLines('prepDays', baseYear);
 
-            // 1. 3월 1일부터 이듬해 2월 말일까지의 전체 정규 수업일 목록 추출 (공휴일/휴일/Prep Day 제외)
             let globalClassDays = [];
             let startDate = new Date(baseYear, 2, 1); 
             let endDate = new Date(baseYear + 1, 2, 0);
@@ -298,7 +297,6 @@
                 }
             }
 
-            // 2. [고도화 핵심 알고리즘] 순차 배너 바인딩 및 가변 누적 롤링 처리
             let sessions = [];
             let pool = [...globalClassDays];
             let lastColorToggle = 1;
@@ -306,7 +304,6 @@
             monthsOrder.forEach(m => {
                 if (pool.length === 0) return;
 
-                // 2월 마감 배너는 횟수 제한 없이 남은 전체 일수를 하나의 세션으로 묶음
                 let limit = defaultCutCount;
                 if (m === 2) {
                     limit = pool.length; 
@@ -317,10 +314,9 @@
                     }
                 }
 
-                // 지정된 개수만큼 앞에서부터 순차적으로 조각내어 세션 바인딩
                 const currentSession = pool.splice(0, limit);
                 if (currentSession.length > 0) {
-                    currentSession.targetMonth = m; // 타깃 월 배너 강제 할당
+                    currentSession.targetMonth = m; 
                     currentSession.sessionIndex = lastColorToggle++;
                     sessions.push(currentSession);
                 }
