@@ -484,10 +484,12 @@
                 '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>' +
                 '<style>' +
                 'body { background: white; font-family: sans-serif; padding: 2mm; margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; overflow: hidden; }' +
-                'h1 { font-size: 1.8rem !important; line-height: 1 !important; margin-bottom: 24px !important; }' +
+                'h1 { font-size: 1.8rem !important; line-height: 1 !important; margin-bottom: 24px !important; text-align: center !important; font-weight: 900 !important; tracking-tight: -0.025em !important; }' +
                 
-                // 1. 선생님용 여백 스타일 (pt-12 상당 상단 마진 적용)
-                (isTeacherMode ? 'h1.teacher-print-gap { margin-top: 50px !important; margin-bottom: 60px !important; } ' : 'h1 { margin-top: 10px !important; margin-bottom: 20px !important; } ') + 
+                // 1. 대제목과 헤더행 사이 공백(margin-bottom) 분리 계산
+                (isTeacherMode ? 
+                'h1.teacher-print-gap { margin-top: 50px !important; margin-bottom: 60px !important; } ' : 
+                'h1 { margin-top: 5px !important; margin-bottom: 8px !important; } ') + // 일반 출력 시 타이틀 마진을 극도로 줄여서 1장 완성 확보
                 
                 '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
                 '.session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }' +
@@ -499,20 +501,20 @@
                 
                 (isTeacherMode ? 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' : '') + 
                 
-                // 2. 선생님 출력모드와 일반 출력모드의 세로 간격(row-gap) 완전 분리 (일반은 15px로 타이트하게 세팅하여 A4 한 장에 강제 고정)
+                // 2. 가로/세로 간격 완벽 분리 (일반 인쇄 모드는 row-gap: 12px 및 여백 조정을 통해 한 장으로 강제 유도)
                 (isTeacherMode ? 
                 '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 65px !important; }' : 
-                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 15px !important; }') + 
+                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 12px !important; }') + 
                 
                 '.print-card-layout { border: 1px solid #d1d5db !important; padding: 6px 4px !important; border-radius: 4px !important; page-break-inside: avoid; background-color: white !important; }' +
                 'table { font-size: 8.5px !important; }' +
                 
-                // 3. 날짜 셀 크기도 분리하여 일반 출력 시 세로 컴팩트하게 조정
+                // 3. 날짜 셀 세로폭 높이 제어
                 (isTeacherMode ? 
                 'td div { height: 18px !important; width: 18px !important; font-size: 8.5px !important; line-height: 18px !important; margin: auto; }' : 
                 'td div { height: 16px !important; width: 16px !important; font-size: 8.5px !important; line-height: 16px !important; margin: auto; }') + 
                 
-                '#printFooter { border-top: 2px solid black !important; padding-top: 8px !important; }' +
+                '#printFooter { border-top: 2px solid black !important; padding-top: 6px !important; margin-top: 10px !important; }' +
                 '.flex-justify { display: flex !important; justify-content: space-between !important; align-items: baseline !important; width: 100% !important; }' +
                 '@media print { @page { size: A4 portrait; margin: 4mm 5mm 4mm 5mm; } body { padding: 0; margin: 0; } }' +
                 '</style></head><body>' +
