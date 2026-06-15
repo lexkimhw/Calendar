@@ -44,7 +44,8 @@
 
         <div class="mb-4 p-4 bg-gray-100 rounded-lg border border-gray-300">
             <label class="block text-xs font-bold text-gray-800 mb-2">📅 특정 달만 수강 횟수 개별 변경 설정</label>
-            <div id="monthCustomContainer" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-2 text-center"></div>
+            <div id="monthCustomContainer" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-2 text-center">
+                </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -96,47 +97,16 @@
     </div>
 
     <script>
-        const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_continuous.json";
+        const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
 
+        // 페이지 최초 로드 시 월별 입력 UI 생성 후 조회 시작
         window.onload = async () => {
             initMonthCustomUI();
-            try {
-                const res = await fetch(DB_URL);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data) {
-                        document.getElementById('baseYear').value = data.baseYear || 2026;
-                        document.getElementById('legalHolidays').value = (data.legal || []).join('\n');
-                        document.getElementById('academyHolidays').value = (data.academy || []).join('\n');
-                        document.getElementById('prepDays').value = (data.prep || []).join('\n');
-                        
-                        const targetDays = data.selectedDays || [2, 4];
-                        document.getElementById('chk_mon').checked = targetDays.includes(1);
-                        document.getElementById('chk_tue').checked = targetDays.includes(2);
-                        document.getElementById('chk_wed').checked = targetDays.includes(3);
-                        document.getElementById('chk_thu').checked = targetDays.includes(4);
-                        document.getElementById('chk_fri').checked = targetDays.includes(5);
-
-                        if(data.customCounts) {
-                            monthsOrder.forEach(m => {
-                                if(data.customCounts[m]) {
-                                    document.getElementById(`chk_custom_${m}`).checked = true;
-                                    const input = document.getElementById(`input_custom_${m}`);
-                                    input.disabled = false;
-                                    input.value = data.customCounts[m];
-                                    input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-amber-50 border-amber-400";
-                                }
-                            });
-                        }
-
-                        calculateSchedule(); return;
-                    }
-                }
-                clearInputs();
-            } catch(e) { clearInputs(); }
+            await loadFromFirebase();
         };
 
+        // 월별 커스텀 횟수 입력 컴포넌트 생성
         function initMonthCustomUI() {
             const container = document.getElementById('monthCustomContainer');
             container.innerHTML = '';
@@ -166,9 +136,9 @@
             calculateSchedule();
         }
 
-        function handleYearChange() {
+        async function handleYearChange() {
             clearInputs();
-            calculateSchedule();
+            await loadFromFirebase();
         }
 
         function clearInputs() {
@@ -184,8 +154,56 @@
             });
         }
 
+        async function loadFromFirebase() {
+            const currentYear = document.getElementById('baseYear').value;
+            const targetUrl = `${DB_BASE_URL}/${currentYear}.json`;
+
+            try {
+                const res = await fetch(targetUrl);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data) {
+                        document.getElementById('legalHolidays').value = (data.legal || []).join('\n');
+                        document.getElementById('academyHolidays').value = (data.academy || []).join('\n');
+                        document.getElementById('prepDays').value = (data.prep || []).join('\n');
+                        
+                        const targetDays = data.selectedDays || [2, 4];
+                        document.getElementById('chk_mon').checked = targetDays.includes(1);
+                        document.getElementById('chk_tue').checked = targetDays.includes(2);
+                        document.getElementById('chk_wed').checked = targetDays.includes(3);
+                        document.getElementById('chk_thu').checked = targetDays.includes(4);
+                        document.getElementById('chk_fri').checked = targetDays.includes(5);
+
+                        // 월별 개별설정 서버 로드 반영
+                        if(data.customCounts) {
+                            monthsOrder.forEach(m => {
+                                if(data.customCounts[m]) {
+                                    document.getElementById(`chk_custom_${m}`).checked = true;
+                                    const input = document.getElementById(`input_custom_${m}`);
+                                    input.disabled = false;
+                                    input.value = data.customCounts[m];
+                                    input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-amber-50 border-amber-400";
+                                }
+                            });
+                        }
+                    } else {
+                        clearInputs();
+                    }
+                }
+            } catch(e) { 
+                console.error("데이터 로딩 실패:", e);
+                clearInputs(); 
+            }
+            calculateSchedule();
+        }
+
         async function saveToFirebase() {
+            const currentYear = document.getElementById('baseYear').value;
+            const targetUrl = `${DB_BASE_URL}/${currentYear}.json`;
+
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(cb => parseInt(cb.value));
+            
+            // 커스텀 횟수 객체 구조 빌드
             const customCounts = {};
             monthsOrder.forEach(m => {
                 if(document.getElementById(`chk_custom_${m}`).checked) {
@@ -194,7 +212,7 @@
             });
 
             const payload = {
-                baseYear: parseInt(document.getElementById('baseYear').value), 
+                baseYear: parseInt(currentYear), 
                 selectedDays: selectedDays,
                 customCounts: customCounts,
                 legal: document.getElementById('legalHolidays').value.split('\n').filter(v => v.trim()),
@@ -202,8 +220,8 @@
                 prep: document.getElementById('prepDays').value.split('\n').filter(v => v.trim())
             };
             try {
-                await fetch(DB_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                alert('✅ 학원 맞춤형 스케줄 설정이 실시간 DB에 안전하게 저장되었습니다.');
+                await fetch(targetUrl, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                alert(`✅ ${currentYear}년 학원 설정 및 월별 지정 회차 데이터가 안전하게 저장되었습니다.`);
             } catch(e) { alert('❌ 저장 실패'); }
         }
 
@@ -265,7 +283,7 @@
             document.getElementById('displayDays').innerText = `수업 요일 : ${korPart}(${engPart})`;
 
             const defaultCutCount = (selectedDays.length === 1) ? 4 : 8;
-            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 연속 분할 정산)`;
+            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 기본 ${defaultCutCount}회 단위 세션 정산)`;
 
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
@@ -275,77 +293,67 @@
             let startDate = new Date(baseYear, 2, 1); let endDate = new Date(baseYear + 1, 2, 0);
 
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curD = d.getDate();
-                const dKey = `${curY}-${String(curM).padStart(2,'0')}-${String(curD).padStart(2,'0')}`;
+                const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curM_day = d.getDate();
+                const dKey = `${curY}-${String(curM).padStart(2,'0')}-${String(curM_day).padStart(2,'0')}`;
                 
                 if (legal.map[dKey] || academy.map[dKey] || prep.map[dKey]) continue;
                 if (selectedDays.includes(d.getDay())) {
-                    globalClassDays.push({ dateKey: dKey, month: curM, dateNum: curD, year: curY });
+                    globalClassDays.push({ dateKey: dKey, month: curM, dateNum: curM_day, year: curY });
                 }
             }
 
-            // [핵심 로직 개편] 달의 가변 세션 횟수를 반영한 정확한 롤링 매칭
-            let sessions = [];
-            let tempDays = [...globalClassDays];
-            let lastAssignedMonth = 2; // 이전 달 추적용
+            // 개별 지정 변경 로직을 반영한 유연한 세션 분할 알고리즘 구현
+            let sessions = []; let currentSession = [];
+            let sessionNumCounter = 1;
 
-            while(tempDays.length > 0) {
-                const firstDayOfSession = tempDays[0];
-                let targetMonth = firstDayOfSession.month;
-                
-                // 만약 이전 세션이 타겟 월의 배너를 선점했다면, 순차적으로 다음 달 인덱스로 매칭 유도
-                if (targetMonth === lastAssignedMonth) {
-                    targetMonth = (targetMonth % 12) + 1;
+            let idx = 0;
+            while(idx < globalClassDays.length) {
+                const day = globalClassDays[idx];
+                currentSession.push(day);
+
+                // 현재 담고 있는 세션의 첫 번째 날짜가 속한 월을 기준으로 컷 카운트 산출
+                const sessionStartMonth = currentSession[0].month;
+                const isCustom = document.getElementById(`chk_custom_${sessionStartMonth}`).checked;
+                const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${sessionStartMonth}`).value) || defaultCutCount) : defaultCutCount;
+
+                const isFinalMonth = (day.year === baseYear + 1 && day.month === 2);
+
+                if (!isFinalMonth && currentSession.length === currentCutLimit) {
+                    sessions.push(currentSession);
+                    currentSession = [];
                 }
-
-                const isCustom = document.getElementById(`chk_custom_${targetMonth}`)?.checked;
-                const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${targetMonth}`).value) || defaultCutCount) : defaultCutCount;
-
-                const currentSession = tempDays.splice(0, currentCutLimit);
-                currentSession.targetMonth = targetMonth; // 배너 매칭 기준 월 강제 바인딩
-                sessions.push(currentSession);
-                
-                lastAssignedMonth = targetMonth;
+                idx++;
             }
+            if (currentSession.length > 0) sessions.push(currentSession);
 
-            const dateStyleMap = {}; 
-            const monthBannerInfo = {}; 
-
-            monthsOrder.forEach(m => {
-                monthBannerInfo[m] = { text: `${m}월 기간: 수업 없음`, bgClass: "bg-gray-200", count: 0 };
-            });
+            const dateStyleMap = {}; const monthBannerInfo = {}; 
 
             sessions.forEach((session, sIdx) => {
-                if(session.length === 0) return;
                 const sessionNum = sIdx + 1;
                 const colorClass = (sessionNum % 2 !== 0) ? "session-odd" : "session-even";
-                
-                const firstDay = session[0]; 
-                const lastDay = session[session.length - 1];
-                const bMonth = session.targetMonth;
+                const firstDay = session[0]; const lastDay = session[session.length - 1];
+                const infoText = `${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`;
 
                 session.forEach(day => {
                     dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
+                    if (!monthBannerInfo[day.month]) {
+                        monthBannerInfo[day.month] = { text: `${day.month}월 기간: ` + infoText, bgClass: colorClass, count: session.length };
+                    }
+                    if (day.month === 2) {
+                        monthBannerInfo[2] = { text: `2월 기간: ` + infoText, bgClass: colorClass, count: session.length };
+                    }
                 });
-
-                monthBannerInfo[bMonth] = {
-                    text: `${bMonth}월 기간: ${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`,
-                    bgClass: colorClass,
-                    count: session.length
-                };
             });
 
-            // 안내 푸터 텍스트 동적 분기
+            // 푸터 체크 알림
             let alertMsg = "※ 매월 20일 수강료 안내";
             let customCheckedMonths = [];
             monthsOrder.forEach(m => {
-                if(document.getElementById(`chk_custom_${m}`).checked) {
-                    const cnt = document.getElementById(`input_custom_${m}`).value;
-                    customCheckedMonths.push(`${m}월(${cnt}회)`);
-                }
+                if(document.getElementById(`chk_custom_${m}`).checked) customCheckedMonths.push(`${m}월`);
             });
-            if (customCheckedMonths.length > 0) {
-                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ')}) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
+            const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
+            if (customCheckedMonths.length > 0 || febFinalCount !== defaultCutCount) {
+                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ') || '없음'}) 및 2월(${febFinalCount}회) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
             }
             document.getElementById('alertFooter').innerText = alertMsg;
 
@@ -357,7 +365,7 @@
                 const currYear = (month < 3) ? baseYear + 1 : baseYear;
                 const firstDayIdx = new Date(currYear, month - 1, 1).getDay();
                 const lastDateNum = new Date(currYear, month, 0).getDate();
-                const bInfo = monthBannerInfo[month];
+                const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200" };
 
                 let html = `
                     <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm">
