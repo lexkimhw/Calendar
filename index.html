@@ -89,7 +89,7 @@
                     </div>
                 </div>
                 <div id="feePaymentNotice" class="text-xs font-extrabold text-blue-700 tracking-tight text-right self-end pb-0.5 whitespace-nowrap">
-                    수강료 납부 기간은 매월 25일부터 말일까지입니다.
+                    
                 </div>
             </div>
         </div>
@@ -344,14 +344,14 @@
                 }
             });
 
-            let alertMsg = "※ 매월 20일 수강료 안내";
+            let alertMsg = "※ 매월 20일 수강료 안내 및 납부 기간은 매월 25일부터 말일까지 입니다.";
             let customCheckedMonths = [];
             monthsOrder.forEach(m => {
                 if(document.getElementById(`chk_custom_${m}`).checked) customCheckedMonths.push(`${m}월`);
             });
             const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
             if (customCheckedMonths.length > 0 || febFinalCount !== defaultCutCount) {
-                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ') || '없음'}) 및 2월(${febFinalCount}회) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
+                alertMsg = `※ (${customCheckedMonths.join(', ') || ''}) 및 2월(${febFinalCount}회) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내 및 납부 기간은 매월 25일부터 말일까지 입니다.)`;
             }
             document.getElementById('alertFooter').innerText = alertMsg;
 
