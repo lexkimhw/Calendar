@@ -296,70 +296,67 @@
                 }
             }
 
-            // 개별 지정월 세션 분할 매칭 처리
-            let sessions = []; let currentSession = [];
-            let idx = 0;
-            while(idx < globalClassDays.length) {
-                const day = globalClassDays[idx];
-                currentSession.push(day);
+            // [핵심 변경] 연속 롤링 구조 체계적인 분할 알고리즘
+            let sessions = [];
+            let tempDays = [...globalClassDays];
+            let currentSessionIdx = 1;
 
-                const sessionStartMonth = currentSession[0].month;
-                const isCustom = document.getElementById(`chk_custom_${sessionStartMonth}`).checked;
-                const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${sessionStartMonth}`).value) || defaultCutCount) : defaultCutCount;
+            while(tempDays.length > 0) {
+                // 이번 세션의 시작 날짜 정보 확인
+                const firstDayOfSession = tempDays[0];
+                const sMonth = firstDayOfSession.month;
+                
+                // 해당 월의 개별 지정 횟수 유무 확인
+                const isCustom = document.getElementById(`chk_custom_${sMonth}`).checked;
+                const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${sMonth}`).value) || defaultCutCount) : defaultCutCount;
 
-                const isFinalMonth = (day.year === baseYear + 1 && day.month === 2);
-
-                if (!isFinalMonth && currentSession.length === currentCutLimit) {
-                    sessions.push(currentSession);
-                    currentSession = [];
-                }
-                idx++;
+                // 해당 수만큼 잘라내어 하나의 세션으로 편성
+                const currentSession = tempDays.splice(0, currentCutLimit);
+                sessions.push(currentSession);
             }
-            if (currentSession.length > 0) sessions.push(currentSession);
 
             const dateStyleMap = {}; 
-            // 실시간 상단 배너 표시 데이터 맵 정의
             const monthBannerInfo = {}; 
 
+            // 초기 기본 정보 초기화
+            monthsOrder.forEach(m => {
+                monthBannerInfo[m] = { text: `${m}월 기간: 수업 없음`, bgClass: "bg-gray-200", count: 0 };
+            });
+
+            // 각 세션을 순회하며 타겟 매칭 및 배너 텍스트 매핑
             sessions.forEach((session, sIdx) => {
+                if(session.length === 0) return;
+                
                 const sessionNum = sIdx + 1;
                 const colorClass = (sessionNum % 2 !== 0) ? "session-odd" : "session-even";
+                
+                const firstDay = session[0]; 
+                const lastDay = session[session.length - 1];
+                const sessionStartMonth = firstDay.month; // 세션 시작월 기준 강제 동기화
+
                 session.forEach(day => {
                     dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
                 });
+
+                // 세션 시작월 배너에 기간 정보 업데이트
+                monthBannerInfo[sessionStartMonth] = {
+                    text: `${sessionStartMonth}월 기간: ${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`,
+                    bgClass: colorClass,
+                    count: session.length
+                };
             });
 
-            // 각 월별 달력 카드 상단 배너 텍스트 실시간 정렬
-            monthsOrder.forEach(m => {
-                const daysInThisMonth = globalClassDays.filter(d => d.month === m);
-                if (daysInThisMonth.length > 0) {
-                    const firstDay = daysInThisMonth[0];
-                    const lastDay = daysInThisMonth[daysInThisMonth.length - 1];
-                    const count = daysInThisMonth.length;
-                    
-                    // 해당 월의 첫날 세션 정보를 바탕으로 배너 배경색 동적 매칭
-                    const dKey = `${firstDay.year}-${String(firstDay.month).padStart(2,'0')}-${String(firstDay.dateNum).padStart(2,'0')}`;
-                    const bgClass = (dateStyleMap[dKey] && dateStyleMap[dKey].colorClass) ? dateStyleMap[dKey].colorClass : "bg-gray-200";
-
-                    monthBannerInfo[m] = {
-                        text: `${m}월 기간: ${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${count}회)`,
-                        bgClass: bgClass,
-                        count: count
-                    };
-                } else {
-                    monthBannerInfo[m] = { text: `${m}월 기간: 수업 없음`, bgClass: "bg-gray-200", count: 0 };
-                }
-            });
-
-            // 하단 안내 알림 경고 최적화
+            // 하단 푸터 안내 메시지 경고 최적화
             let alertMsg = "※ 매월 20일 수강료 안내";
             let customCheckedMonths = [];
             monthsOrder.forEach(m => {
-                if(document.getElementById(`chk_custom_${m}`).checked) customCheckedMonths.push(`${m}월`);
+                if(document.getElementById(`chk_custom_${m}`).checked) {
+                    const cnt = document.getElementById(`input_custom_${m}`).value;
+                    customCheckedMonths.push(`${m}월(${cnt}회)`);
+                }
             });
-            const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
-            if (customCheckedMonths.length > 0 || febFinalCount !== defaultCutCount) {
-                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ') || '없음'}) 및 2월(${febFinalCount}회) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
+            if (customCheckedMonths.length > 0) {
+                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ')}) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
             }
             document.getElementById('alertFooter').innerText = alertMsg;
 
@@ -371,7 +368,7 @@
                 const currYear = (month < 3) ? baseYear + 1 : baseYear;
                 const firstDayIdx = new Date(currYear, month - 1, 1).getDay();
                 const lastDateNum = new Date(currYear, month, 0).getDate();
-                const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200" };
+                const bInfo = monthBannerInfo[month];
 
                 let html = `
                     <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm">
