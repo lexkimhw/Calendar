@@ -23,7 +23,7 @@
         <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
-                <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작 - 내년 2월 종료)</label>
+                <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작 ~ 내년 2월 종료)</label>
                 <input type="number" id="baseYear" class="w-full border p-2 rounded font-bold" value="2026" onchange="handleYearChange()">
             </div>
             <div class="md:col-span-2">
@@ -296,7 +296,6 @@
             const academy = parseHolidayLines('academyHolidays', baseYear);
             const prep = parseHolidayLines('prepDays', baseYear);
 
-            // 1. 전체 유효 수업 일자 추출
             let globalClassDays = [];
             let startDate = new Date(baseYear, 2, 1); let endDate = new Date(baseYear + 1, 2, 0);
 
@@ -310,17 +309,14 @@
                 }
             }
 
-            // 2. 월별 매칭 로직 (각 월의 영역이 독립된 1개의 세션으로 연동 계산되도록 수정)
             const dateStyleMap = {}; 
             const monthBannerInfo = {}; 
 
             let dayIdx = 0;
             monthsOrder.forEach((currentMonth, mOrderIdx) => {
-                // 해당 월 영역에 매칭할 목표 횟수 설정
                 const isCustom = document.getElementById(`chk_custom_${currentMonth}`).checked;
                 let targetCount = isCustom ? (parseInt(document.getElementById(`input_custom_${currentMonth}`).value) || defaultCutCount) : defaultCutCount;
 
-                // 2월(마지막 달)인 경우 남은 모든 수업일을 전부 배정
                 if (currentMonth === 2) {
                     let remainingCount = globalClassDays.length - dayIdx;
                     if (remainingCount > 0) targetCount = remainingCount;
@@ -490,7 +486,8 @@
                 'body { background: white; font-family: sans-serif; padding: 2mm; margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; overflow: hidden; }' +
                 'h1 { font-size: 1.8rem !important; line-height: 1 !important; margin-bottom: 24px !important; }' +
                 
-                (isTeacherMode ? 'h1.teacher-print-gap { margin-top: 50px !important; margin-bottom: 60px !important; } ' : '') + 
+                // 1. 선생님용 여백 스타일 (pt-12 상당 상단 마진 적용)
+                (isTeacherMode ? 'h1.teacher-print-gap { margin-top: 50px !important; margin-bottom: 60px !important; } ' : 'h1 { margin-top: 10px !important; margin-bottom: 20px !important; } ') + 
                 
                 '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
                 '.session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }' +
@@ -502,10 +499,19 @@
                 
                 (isTeacherMode ? 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' : '') + 
                 
-                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 65px !important; }' + 
+                // 2. 선생님 출력모드와 일반 출력모드의 세로 간격(row-gap) 완전 분리 (일반은 15px로 타이트하게 세팅하여 A4 한 장에 강제 고정)
+                (isTeacherMode ? 
+                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 65px !important; }' : 
+                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 15px !important; }') + 
+                
                 '.print-card-layout { border: 1px solid #d1d5db !important; padding: 6px 4px !important; border-radius: 4px !important; page-break-inside: avoid; background-color: white !important; }' +
                 'table { font-size: 8.5px !important; }' +
-                'td div { height: 18px !important; width: 18px !important; font-size: 8.5px !important; line-height: 18px !important; margin: auto; }' + 
+                
+                // 3. 날짜 셀 크기도 분리하여 일반 출력 시 세로 컴팩트하게 조정
+                (isTeacherMode ? 
+                'td div { height: 18px !important; width: 18px !important; font-size: 8.5px !important; line-height: 18px !important; margin: auto; }' : 
+                'td div { height: 16px !important; width: 16px !important; font-size: 8.5px !important; line-height: 16px !important; margin: auto; }') + 
+                
                 '#printFooter { border-top: 2px solid black !important; padding-top: 8px !important; }' +
                 '.flex-justify { display: flex !important; justify-content: space-between !important; align-items: baseline !important; width: 100% !important; }' +
                 '@media print { @page { size: A4 portrait; margin: 4mm 5mm 4mm 5mm; } body { padding: 0; margin: 0; } }' +
