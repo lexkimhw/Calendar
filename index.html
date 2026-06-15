@@ -296,6 +296,7 @@
             const academy = parseHolidayLines('academyHolidays', baseYear);
             const prep = parseHolidayLines('prepDays', baseYear);
 
+            // 1. 전체 유효 수업 일자 추출
             let globalClassDays = [];
             let startDate = new Date(baseYear, 2, 1); let endDate = new Date(baseYear + 1, 2, 0);
 
@@ -309,42 +310,42 @@
                 }
             }
 
-            let sessions = []; let currentSession = [];
-            let idx = 0;
-            while(idx < globalClassDays.length) {
-                const day = globalClassDays[idx];
-                currentSession.push(day);
+            // 2. 월별 매칭 로직 (각 월의 영역이 독립된 1개의 세션으로 연동 계산되도록 수정)
+            const dateStyleMap = {}; 
+            const monthBannerInfo = {}; 
 
-                const sessionStartMonth = currentSession[0].month;
-                const isCustom = document.getElementById(`chk_custom_${sessionStartMonth}`).checked;
-                const currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${sessionStartMonth}`).value) || defaultCutCount) : defaultCutCount;
-                const isFinalMonth = (day.year === baseYear + 1 && day.month === 2);
+            let dayIdx = 0;
+            monthsOrder.forEach((currentMonth, mOrderIdx) => {
+                // 해당 월 영역에 매칭할 목표 횟수 설정
+                const isCustom = document.getElementById(`chk_custom_${currentMonth}`).checked;
+                let targetCount = isCustom ? (parseInt(document.getElementById(`input_custom_${currentMonth}`).value) || defaultCutCount) : defaultCutCount;
 
-                if (!isFinalMonth && currentSession.length === currentCutLimit) {
-                    sessions.push(currentSession);
-                    currentSession = [];
+                // 2월(마지막 달)인 경우 남은 모든 수업일을 전부 배정
+                if (currentMonth === 2) {
+                    let remainingCount = globalClassDays.length - dayIdx;
+                    if (remainingCount > 0) targetCount = remainingCount;
                 }
-                idx++;
-            }
-            if (currentSession.length > 0) sessions.push(currentSession);
 
-            const dateStyleMap = {}; const monthBannerInfo = {}; 
+                let currentSessionDays = [];
+                for (let c = 0; c < targetCount; c++) {
+                    if (dayIdx >= globalClassDays.length) break;
+                    currentSessionDays.push(globalClassDays[dayIdx]);
+                    dayIdx++;
+                }
 
-            sessions.forEach((session, sIdx) => {
-                const sessionNum = sIdx + 1;
-                const colorClass = (sessionNum % 2 !== 0) ? "session-odd" : "session-even";
-                const firstDay = session[0]; const lastDay = session[session.length - 1];
-                const infoText = `${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`;
+                if (currentSessionDays.length > 0) {
+                    const colorClass = ((mOrderIdx + 1) % 2 !== 0) ? "session-odd" : "session-even";
+                    const firstDay = currentSessionDays[0]; 
+                    const lastDay = currentSessionDays[currentSessionDays.length - 1];
+                    const infoText = `${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${currentSessionDays.length}회)`;
 
-                session.forEach(day => {
-                    dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
-                    if (!monthBannerInfo[day.month]) {
-                        monthBannerInfo[day.month] = { text: `${day.month}월 기간: ` + infoText, bgClass: colorClass, count: session.length };
-                    }
-                    if (day.month === 2) {
-                        monthBannerInfo[2] = { text: `2월 기간: ` + infoText, bgClass: colorClass, count: session.length };
-                    }
-                });
+                    currentSessionDays.forEach(day => {
+                        dateStyleMap[day.dateKey] = { colorClass: colorClass };
+                    });
+                    monthBannerInfo[currentMonth] = { text: `${currentMonth}월 기간: ` + infoText, bgClass: colorClass, count: currentSessionDays.length };
+                } else {
+                    monthBannerInfo[currentMonth] = { text: `${currentMonth}월 기간: 수업 없음`, bgClass: "bg-gray-200", count: 0 };
+                }
             });
 
             let alertMsg = "※ 매월 20일 수강료 안내";
@@ -489,7 +490,6 @@
                 'body { background: white; font-family: sans-serif; padding: 2mm; margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; overflow: hidden; }' +
                 'h1 { font-size: 1.8rem !important; line-height: 1 !important; margin-bottom: 24px !important; }' +
                 
-                // 선생님 모드 전용 여백 스타일 (최상단 마진 및 범례 아이콘과의 간격 확보)
                 (isTeacherMode ? 'h1.teacher-print-gap { margin-top: 50px !important; margin-bottom: 60px !important; } ' : '') + 
                 
                 '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
@@ -502,12 +502,9 @@
                 
                 (isTeacherMode ? 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' : '') + 
                 
-                // 인쇄 그리드 레이아웃 설정 (row-gap을 기존 20px에서 65px로 3배 이상 확대하여 A4 종이 세로 비율에 채움)
                 '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 65px !important; }' + 
                 '.print-card-layout { border: 1px solid #d1d5db !important; padding: 6px 4px !important; border-radius: 4px !important; page-break-inside: avoid; background-color: white !important; }' +
                 'table { font-size: 8.5px !important; }' +
-                
-                // 달력 날짜 셀 크기를 기존 16px에서 18px로 키워 세로 비율 밸런스 조정
                 'td div { height: 18px !important; width: 18px !important; font-size: 8.5px !important; line-height: 18px !important; margin: auto; }' + 
                 '#printFooter { border-top: 2px solid black !important; padding-top: 8px !important; }' +
                 '.flex-justify { display: flex !important; justify-content: space-between !important; align-items: baseline !important; width: 100% !important; }' +
