@@ -78,8 +78,7 @@
             </div>
         </div>
 
-        <div id="calendarGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            </div>
+        <div id="calendarGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
 
         <div class="mt-6 pt-4 border-t-2 border-black text-xs font-bold space-y-1">
             <p>※ 수강료 납부 기간은 매월 25일 부터 말일까지 입니다.</p>
@@ -90,20 +89,28 @@
         </div>
     </div>
 
-const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_continuous.json";
+    <script>
+        const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_continuous.json";
 
-        // 페이지 최초 로드 시 데이터 불러오기
+        // 최초 페이지 로딩 시 서버 데이터 조회
         window.onload = async () => {
             await loadFromFirebase();
         };
 
-        // 연도 변경 시 작동하는 제어 함수 (서버에서 다시 불러오도록 수정)
+        // 기준 연도 인풋창 값이 변경될 때 실행되는 제어 함수
         async function handleYearChange() {
             clearInputs();
             await loadFromFirebase();
         }
 
-        // 서버(Firebase)에서 데이터를 로드하여 화면에 뿌려주는 함수
+        // 입력 폼을 깨끗하게 비우는 함수
+        function clearInputs() {
+            document.getElementById('legalHolidays').value = '';
+            document.getElementById('academyHolidays').value = '';
+            document.getElementById('prepDays').value = '';
+        }
+
+        // 파이어베이스에서 데이터를 받아와 연도가 맞으면 매칭하고 스케줄을 그리는 핵심 함수
         async function loadFromFirebase() {
             try {
                 const res = await fetch(DB_URL);
@@ -112,7 +119,7 @@ const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedata
                     if (data) {
                         const currentInputYear = parseInt(document.getElementById('baseYear').value);
                         
-                        // 서버에 저장된 연도와 현재 입력된 연도가 일치할 때만 데이터를 입력창에 바인딩
+                        // 서버에 저장된 baseYear와 현재 UI에 입력된 숫자가 일치할 때만 바인딩
                         if (data.baseYear === currentInputYear) {
                             document.getElementById('legalHolidays').value = (data.legal || []).join('\n');
                             document.getElementById('academyHolidays').value = (data.academy || []).join('\n');
@@ -125,24 +132,17 @@ const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedata
                             document.getElementById('chk_thu').checked = targetDays.includes(4);
                             document.getElementById('chk_fri').checked = targetDays.includes(5);
                         } else {
-                            // 다른 연도라면 입력창을 비워 새로운 입력을 유도
+                            // 연도가 일치하지 않는다면 다른 데이터이므로 빈 창 유지
                             clearInputs();
                         }
                     }
                 }
             } catch(e) { 
-                console.error("데이터 로드 실패:", e);
+                console.error("데이터 로딩 실패:", e);
                 clearInputs(); 
             }
-            // 최종적으로 스케줄러 계산 및 캘린더 UI 렌더링
+            // 불러오기(또는 리셋) 작업이 끝난 후 최종 스케줄러 재계산 및 드로잉
             calculateSchedule();
-        }
-
-        // 입력 폼을 깨끗하게 비워 새로운 연도 입력을 준비하는 함수
-        function clearInputs() {
-            document.getElementById('legalHolidays').value = '';
-            document.getElementById('academyHolidays').value = '';
-            document.getElementById('prepDays').value = '';
         }
 
         async function saveToFirebase() {
@@ -227,12 +227,12 @@ const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedata
             let startDate = new Date(baseYear, 2, 1); let endDate = new Date(baseYear + 1, 2, 0);
 
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curD = d.getDate();
-                const dKey = `${curY}-${String(curM).padStart(2,'0')}-${String(curD).padStart(2,'0')}`;
+                const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curM_day = d.getDate();
+                const dKey = `${curY}-${String(curM).padStart(2,'0')}-${String(curM_day).padStart(2,'0')}`;
                 
                 if (legal.map[dKey] || academy.map[dKey] || prep.map[dKey]) continue;
                 if (selectedDays.includes(d.getDay())) {
-                    globalClassDays.push({ dateKey: dKey, month: curM, dateNum: curD, year: curY });
+                    globalClassDays.push({ dateKey: dKey, month: curM, dateNum: curM_day, year: curY });
                 }
             }
 
