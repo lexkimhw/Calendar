@@ -90,39 +90,51 @@
         </div>
     </div>
 
-    <script>
-        const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_continuous.json";
+const DB_URL = "https://lexkimhw-63c3b-default-rtdb.asia-southeast1.firebasedatabase.app/schedule_continuous.json";
 
-        // ⚠️ 고정 기본값 데이터셋(defaultData) 전면 제거 완료
-
+        // 페이지 최초 로드 시 데이터 불러오기
         window.onload = async () => {
+            await loadFromFirebase();
+        };
+
+        // 연도 변경 시 작동하는 제어 함수 (서버에서 다시 불러오도록 수정)
+        async function handleYearChange() {
+            clearInputs();
+            await loadFromFirebase();
+        }
+
+        // 서버(Firebase)에서 데이터를 로드하여 화면에 뿌려주는 함수
+        async function loadFromFirebase() {
             try {
                 const res = await fetch(DB_URL);
                 if (res.ok) {
                     const data = await res.json();
                     if (data) {
-                        document.getElementById('baseYear').value = data.baseYear || 2026;
-                        document.getElementById('legalHolidays').value = (data.legal || []).join('\n');
-                        document.getElementById('academyHolidays').value = (data.academy || []).join('\n');
-                        document.getElementById('prepDays').value = (data.prep || []).join('\n');
+                        const currentInputYear = parseInt(document.getElementById('baseYear').value);
                         
-                        const targetDays = data.selectedDays || [2, 4];
-                        document.getElementById('chk_mon').checked = targetDays.includes(1);
-                        document.getElementById('chk_tue').checked = targetDays.includes(2);
-                        document.getElementById('chk_wed').checked = targetDays.includes(3);
-                        document.getElementById('chk_thu').checked = targetDays.includes(4);
-                        document.getElementById('chk_fri').checked = targetDays.includes(5);
-
-                        calculateSchedule(); return;
+                        // 서버에 저장된 연도와 현재 입력된 연도가 일치할 때만 데이터를 입력창에 바인딩
+                        if (data.baseYear === currentInputYear) {
+                            document.getElementById('legalHolidays').value = (data.legal || []).join('\n');
+                            document.getElementById('academyHolidays').value = (data.academy || []).join('\n');
+                            document.getElementById('prepDays').value = (data.prep || []).join('\n');
+                            
+                            const targetDays = data.selectedDays || [2, 4];
+                            document.getElementById('chk_mon').checked = targetDays.includes(1);
+                            document.getElementById('chk_tue').checked = targetDays.includes(2);
+                            document.getElementById('chk_wed').checked = targetDays.includes(3);
+                            document.getElementById('chk_thu').checked = targetDays.includes(4);
+                            document.getElementById('chk_fri').checked = targetDays.includes(5);
+                        } else {
+                            // 다른 연도라면 입력창을 비워 새로운 입력을 유도
+                            clearInputs();
+                        }
                     }
                 }
-                clearInputs();
-            } catch(e) { clearInputs(); }
-        };
-
-        // 연도 변경 시 작동하는 제어 함수
-        function handleYearChange() {
-            clearInputs();
+            } catch(e) { 
+                console.error("데이터 로드 실패:", e);
+                clearInputs(); 
+            }
+            // 최종적으로 스케줄러 계산 및 캘린더 UI 렌더링
             calculateSchedule();
         }
 
