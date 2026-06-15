@@ -100,7 +100,7 @@
             <div class="flex justify-between items-baseline" id="footerAlertRow">
                 <p id="alertFooter" class="text-red-600 text-xs font-bold tracking-tight"></p>
             </div>
-            <p id="footerNoticeText">※ 휴강 일정과 특강 일정은 학원 사정에 따라 변경 될 수도 있음을 알려 드립니다.</p>
+            <p id="footerNoticeText" class="text-gray-600">※ 휴강 일정과 특강 일정은 학원 사정에 따라 변경 될 수도 있음을 알려 드립니다.</p>
         </div>
     </div>
 
@@ -344,14 +344,20 @@
                 }
             });
 
-            let alertMsg = "※ 매월 20일 수강료 안내";
             let customCheckedMonths = [];
             monthsOrder.forEach(m => {
-                if(document.getElementById(`chk_custom_${m}`).checked) customCheckedMonths.push(`${m}월`);
+                if(document.getElementById(`chk_custom_${m}`).checked) {
+                    const cnt = monthBannerInfo[m] ? monthBannerInfo[m].count : 0;
+                    customCheckedMonths.push(`${m}월 ${cnt}회`);
+                }
             });
             const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
-            if (customCheckedMonths.length > 0 || febFinalCount !== defaultCutCount) {
-                alertMsg = `※ 개별 지정월(${customCheckedMonths.join(', ') || '없음'}) 및 2월(${febFinalCount}회) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내)`;
+            
+            let alertMsg = "";
+            if (customCheckedMonths.length > 0) {
+                alertMsg = `※ 개별 지정월 안내: [ ${customCheckedMonths.join(', ')} ] 및 2월 ${febFinalCount}회 변경 처리 완료.`;
+            } else {
+                alertMsg = `※ 2월 남은 횟수: ${febFinalCount}회 연동 계산 처리 완료.`;
             }
             document.getElementById('alertFooter').innerText = alertMsg;
 
@@ -450,7 +456,6 @@
                 document.getElementById("noClassNotice").style.display = "none";
                 document.getElementById("feePaymentNotice").style.display = "none";
                 document.getElementById("displayDaysWrapper").style.display = "none";
-                document.getElementById("printFooter").style.display = "none";
                 
                 mainTitleEl.classList.add("teacher-print-gap");
 
@@ -463,13 +468,12 @@
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
-            // DOM 복구
+            // DOM 상태 원상 복구
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
             document.getElementById("feePaymentNotice").style.display = "block";
             document.getElementById("displayDaysWrapper").style.display = "block";
-            document.getElementById("printFooter").style.display = "block";
             mainTitleEl.classList.remove("teacher-print-gap");
             
             document.querySelectorAll(".standard-banner").forEach(el => el.style.display = "block");
@@ -484,12 +488,11 @@
                 '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>' +
                 '<style>' +
                 'body { background: white; font-family: sans-serif; padding: 2mm; margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; overflow: hidden; }' +
-                'h1 { font-size: 1.8rem !important; line-height: 1 !important; margin-bottom: 24px !important; text-align: center !important; font-weight: 900 !important; tracking-tight: -0.025em !important; }' +
+                'h1 { font-size: 1.8rem !important; line-height: 1 !important; margin-bottom: 24px !important; text-align: center !important; font-weight: 900 !important; tracking-tight: -0.025em !important; } ' +
                 
-                // 1. 대제목과 헤더행 사이 공백(margin-bottom) 분리 계산
                 (isTeacherMode ? 
                 'h1.teacher-print-gap { margin-top: 50px !important; margin-bottom: 60px !important; } ' : 
-                'h1 { margin-top: 5px !important; margin-bottom: 8px !important; } ') + // 일반 출력 시 타이틀 마진을 극도로 줄여서 1장 완성 확보
+                'h1 { margin-top: 5px !important; margin-bottom: 8px !important; } ') + 
                 
                 '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
                 '.session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }' +
@@ -501,7 +504,6 @@
                 
                 (isTeacherMode ? 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' : '') + 
                 
-                // 2. 가로/세로 간격 완벽 분리 (일반 인쇄 모드는 row-gap: 12px 및 여백 조정을 통해 한 장으로 강제 유도)
                 (isTeacherMode ? 
                 '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 65px !important; }' : 
                 '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 12px !important; }') + 
@@ -509,12 +511,15 @@
                 '.print-card-layout { border: 1px solid #d1d5db !important; padding: 6px 4px !important; border-radius: 4px !important; page-break-inside: avoid; background-color: white !important; }' +
                 'table { font-size: 8.5px !important; }' +
                 
-                // 3. 날짜 셀 세로폭 높이 제어
                 (isTeacherMode ? 
                 'td div { height: 18px !important; width: 18px !important; font-size: 8.5px !important; line-height: 18px !important; margin: auto; }' : 
                 'td div { height: 16px !important; width: 16px !important; font-size: 8.5px !important; line-height: 16px !important; margin: auto; }') + 
                 
-                '#printFooter { border-top: 2px solid black !important; padding-top: 6px !important; margin-top: 10px !important; }' +
+                // 선생님 모드일 경우 하단 알림 및 실선 바를 출력물에서 아예 보이지 않게 처리
+                (isTeacherMode ? 
+                '#printFooter { display: none !important; } ' : 
+                '#printFooter { display: block !important; border-top: 2px solid black !important; padding-top: 6px !important; margin-top: 10px !important; }') + 
+                
                 '.flex-justify { display: flex !important; justify-content: space-between !important; align-items: baseline !important; width: 100% !important; }' +
                 '@media print { @page { size: A4 portrait; margin: 4mm 5mm 4mm 5mm; } body { padding: 0; margin: 0; } }' +
                 '</style></head><body>' +
