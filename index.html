@@ -58,7 +58,7 @@
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-gray-700 mb-1">Prep Day (YYYY-MM-DD : 명칭)</label>
-                <textarea id="prepDays" class="w-full h-32 border p-2 text-xs font-mono rounded placeholder-gray-400" placeholder="예시) 2026-05-01 : Prep Day" oninput="calculateSchedule()"></textarea>
+                <textarea id="prepDays" class="w-full h-32 border p-2 text-xs font-mono rounded placeholder-gray-400" placeholder="예시) 2027-03-02 : Prep Day" oninput="calculateSchedule()"></textarea>
             </div>
         </div>
     </div>
@@ -69,7 +69,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mb-4 border-b-2 border-black pb-3">
             <div class="space-y-1">
                 <div id="displayDays" class="text-2xl font-black text-gray-900">수업 요일 : 화.목(Tue/Thu)</div>
-                <div id="sessionNotice" class="text-xs font-bold text-green-700">** 한달 수강료 기준 연속 롤링 매칭 처리됩니다.</div>
+                <div id="sessionNotice" class="text-xs font-bold text-green-700">** 한달 수강료 기준 연속 매칭 처리됩니다.</div>
             </div>
             
             <div class="flex flex-col space-y-2 justify-self-start md:justify-self-end w-full max-w-md">
@@ -277,14 +277,16 @@
             document.getElementById('displayDays').innerText = `수업 요일 : ${korPart}(${engPart})`;
 
             const defaultCutCount = (selectedDays.length === 1) ? 4 : 8;
-            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 (주 ${selectedDays.length}회, 연속 롤링 분할 정산)`;
+            document.getElementById('sessionNotice').innerText = `** 한달 수강료 기준 연속 매칭 처리됩니다.`;
 
             const legal = parseHolidayLines('legalHolidays', baseYear);
             const academy = parseHolidayLines('academyHolidays', baseYear);
             const prep = parseHolidayLines('prepDays', baseYear);
 
+            // 1. 3월 1일부터 이듬해 2월 말일까지의 전체 정규 수업일 목록 추출 (공휴일/휴일/Prep Day 제외)
             let globalClassDays = [];
-            let startDate = new Date(baseYear, 2, 1); let endDate = new Date(baseYear + 1, 2, 0);
+            let startDate = new Date(baseYear, 2, 1); 
+            let endDate = new Date(baseYear + 1, 2, 0);
 
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                 const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curM_day = d.getDate();
@@ -296,34 +298,33 @@
                 }
             }
 
-            // [핵심 변경] 연도 경계조건 완벽 대응 롤링 알고리즘
+            // 2. [고도화 핵심 알고리즘] 순차 배너 바인딩 및 가변 누적 롤링 처리
             let sessions = [];
-            let tempDays = [...globalClassDays];
-            let lastAssignedMonth = 2; 
+            let pool = [...globalClassDays];
+            let lastColorToggle = 1;
 
-            while(tempDays.length > 0) {
-                const firstDayOfSession = tempDays[0];
-                let currentTargetMonth = firstDayOfSession.month;
+            monthsOrder.forEach(m => {
+                if (pool.length === 0) return;
 
-                if (currentTargetMonth === lastAssignedMonth) {
-                    currentTargetMonth = (currentTargetMonth % 12) + 1;
-                }
-
-                // 2월 세션의 경우 남은 모든 수업일을 한 세션으로 일괄 바인딩 (자동 잔여 마감 처리)
-                let currentCutLimit = defaultCutCount;
-                if (currentTargetMonth === 2) {
-                    currentCutLimit = tempDays.length; 
+                // 2월 마감 배너는 횟수 제한 없이 남은 전체 일수를 하나의 세션으로 묶음
+                let limit = defaultCutCount;
+                if (m === 2) {
+                    limit = pool.length; 
                 } else {
-                    const isCustom = document.getElementById(`chk_custom_${currentTargetMonth}`)?.checked;
-                    currentCutLimit = isCustom ? (parseInt(document.getElementById(`input_custom_${currentTargetMonth}`).value) || defaultCutCount) : defaultCutCount;
+                    const isCustom = document.getElementById(`chk_custom_${m}`)?.checked;
+                    if (isCustom) {
+                        limit = parseInt(document.getElementById(`input_custom_${m}`).value) || defaultCutCount;
+                    }
                 }
 
-                const currentSession = tempDays.splice(0, currentCutLimit);
-                currentSession.targetMonth = currentTargetMonth;
-                sessions.push(currentSession);
-
-                lastAssignedMonth = currentTargetMonth;
-            }
+                // 지정된 개수만큼 앞에서부터 순차적으로 조각내어 세션 바인딩
+                const currentSession = pool.splice(0, limit);
+                if (currentSession.length > 0) {
+                    currentSession.targetMonth = m; // 타깃 월 배너 강제 할당
+                    currentSession.sessionIndex = lastColorToggle++;
+                    sessions.push(currentSession);
+                }
+            });
 
             const dateStyleMap = {}; 
             const monthBannerInfo = {}; 
@@ -332,26 +333,21 @@
                 monthBannerInfo[m] = { text: `${m}월 기간: 수업 없음`, bgClass: "bg-gray-200", count: 0 };
             });
 
-            sessions.forEach((session, sIdx) => {
-                if(session.length === 0) return;
-                const sessionNum = sIdx + 1;
-                const colorClass = (sessionNum % 2 !== 0) ? "session-odd" : "session-even";
-                
+            sessions.forEach(session => {
+                const colorClass = (session.sessionIndex % 2 !== 0) ? "session-odd" : "session-even";
                 const firstDay = session[0]; 
                 const lastDay = session[session.length - 1];
-                const bannerMonth = session.targetMonth; 
+                const bannerMonth = session.targetMonth;
 
                 session.forEach(day => {
-                    dateStyleMap[day.dateKey] = { colorClass: colorClass, sessionNum: sessionNum };
+                    dateStyleMap[day.dateKey] = { colorClass: colorClass };
                 });
 
-                if (monthBannerInfo[bannerMonth]) {
-                    monthBannerInfo[bannerMonth] = {
-                        text: `${bannerMonth}월 기간: ${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`,
-                        bgClass: colorClass,
-                        count: session.length
-                    };
-                }
+                monthBannerInfo[bannerMonth] = {
+                    text: `${bannerMonth}월 기간: ${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${session.length}회)`,
+                    bgClass: colorClass,
+                    count: session.length
+                };
             });
 
             let alertMsg = "※ 매월 20일 수강료 안내";
