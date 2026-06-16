@@ -335,7 +335,15 @@
 
                 const isCustomDiff = (currentSessionDays.length !== defaultCutCount);
 
-                if (currentSessionDays.length > 0) {
+                // 요일 체크가 없는 경우 배너 텍스트 제거 및 투명 처리
+                if (selectedDays.length === 0) {
+                    monthBannerInfo[currentMonth] = {
+                        text: "",
+                        bgClass: "bg-transparent border-none",
+                        count: 0,
+                        isCustomDiff: false
+                    };
+                } else if (currentSessionDays.length > 0) {
                     const colorClass = ((mOrderIdx + 1) % 2 !== 0) ? "session-odd" : "session-even";
                     const firstDay = currentSessionDays[0]; 
                     const lastDay = currentSessionDays[currentSessionDays.length - 1];
@@ -405,7 +413,7 @@
                 const dataDiffAttr = bInfo.isCustomDiff ? "data-custom-diff='true'" : "";
 
                 let html = `
-                    <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm">
+                    <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm" data-month="${month}">
                         <div>
                             <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 text-black mb-1.5 standard-banner ${borderClass}" ${dataDiffAttr}>${bInfo.text}</div>
                             <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 text-black mb-1.5 hidden teacher-banner ${borderClass}" ${dataDiffAttr}>${engMonthNames[month]} ${currYear}</div>
@@ -453,6 +461,7 @@
                             <div class="mt-1.5 pt-1 text-[9.5px] font-bold text-gray-600 border-t border-dashed min-h-[22px] monthly-holiday-list">
                                 ${infoArr.map(t => `<div class="leading-tight text-gray-700">• ${t}</div>`).join('')}
                             </div>
+                            <div class="mt-1.5 pt-1 text-[9px] font-black text-blue-700 border-t border-dashed min-h-[22px] hidden teacher-due-date"></div>
                         </div>
                     </div>`;
                 grid.innerHTML += html;
@@ -477,10 +486,28 @@
                 document.querySelectorAll(".standard-banner").forEach(el => el.style.display = "none");
                 document.querySelectorAll(".teacher-banner").forEach(el => el.style.display = "block");
                 document.querySelectorAll(".monthly-holiday-list").forEach(el => el.style.display = "none");
+                
+                // 선생님 전용 8월/2월 Progress Report Due Date 주입 및 노출
+                document.querySelectorAll(".print-card").forEach(card => {
+                    const monthAttr = card.getAttribute("data-month");
+                    const dueEl = card.querySelector(".teacher-due-date");
+                    if (dueEl) {
+                        if (monthAttr === "8") {
+                            dueEl.innerText = "Progress Report Due Date: Aug. 21st";
+                            dueEl.style.display = "block";
+                        } else if (monthAttr === "2") {
+                            dueEl.innerText = "Progress Report Due Date: Feb. 19th";
+                            dueEl.style.display = "block";
+                        } else {
+                            dueEl.style.display = "none";
+                        }
+                    }
+                });
             }
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
+            // 원본 화면 원상 복구
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
@@ -498,6 +525,7 @@
             document.querySelectorAll(".standard-banner").forEach(el => el.style.display = "block");
             document.querySelectorAll(".teacher-banner").forEach(el => el.style.display = "none");
             document.querySelectorAll(".monthly-holiday-list").forEach(el => el.style.display = "block");
+            document.querySelectorAll(".teacher-due-date").forEach(el => el.style.display = "none");
 
             const printWindow = window.open("", "_blank", "width=1200,height=900");
             
@@ -537,8 +565,7 @@
                 '.standard-banner, .teacher-banner { font-size: 9.5px !important; padding-top: 2.5px !important; padding-bottom: 2.5px !important; font-weight: 800 !important; }' +
                 '.inner-month-title { font-size: 11px !important; font-weight: 800 !important; margin-bottom: 2px !important; }' +
                 
-                // 선생님 인쇄용 모드일 때 한글 월 정보 제목 숨기기 기능 추가
-                (isTeacherMode ? '.inner-month-title { display: none !important; } ' : '') +
+                (isTeacherMode ? '.inner-month-title { display: none !important; } .bg-transparent { display: none !important; }' : '') +
                 
                 '#printFooter { border-top: 2px solid black !important; padding-top: 4px !important; margin-top: 5px !important; font-size: 11.5px !important; line-height: 1.4 !important; }' +
                 '#footerAlertRow { display: flex !important; flex-direction: column !important; width: 100% !important; }' +
