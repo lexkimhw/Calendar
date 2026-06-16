@@ -317,6 +317,8 @@
             const monthBannerInfo = {}; 
 
             let dayIdx = 0;
+            let activeSessionOrder = 0; // ★ 유효한 세션이 생성될 때만 증가하는 독립 카운터 도입
+
             monthsOrder.forEach((currentMonth, mOrderIdx) => {
                 const isCustom = document.getElementById(`chk_custom_${currentMonth}`).checked;
                 let targetCount = defaultCutCount;
@@ -354,7 +356,11 @@
                         isCustomDiff: true
                     };
                 } else if (currentSessionDays.length > 0) {
-                    const colorClass = ((mOrderIdx + 1) % 2 !== 0) ? "session-odd" : "session-even";
+                    activeSessionOrder++; // ★ 실제 수업 일수가 있는 유효한 세션일 때만 순서 카운트 증가
+                    
+                    // 순서에 맞춰 완벽하게 핑퐁 교대 (1: 초록색, 2: 분홍색, 3: 초록색, ...)
+                    const colorClass = (activeSessionOrder % 2 !== 0) ? "session-odd" : "session-even";
+                    
                     const firstDay = currentSessionDays[0]; 
                     const lastDay = currentSessionDays[currentSessionDays.length - 1];
                     const infoText = `${firstDay.month}/${firstDay.dateNum}~${lastDay.month}/${lastDay.dateNum} (${currentSessionDays.length}회)`;
@@ -455,7 +461,6 @@
                     if (legal.map[dKey]) bgClass = "bg-legal";
                     else if (academy.map[dKey]) bgClass = "bg-academy";
                     else if (prep.map[dKey]) bgClass = "bg-prep";
-                    // ★ 특정월 상관없이 매칭된 날짜 색상이면 그대로 달력에 표시 (11월 칸의 20일엔 10월색, 27일엔 12월색 노출)
                     else if (dateStyleMap[dKey]) bgClass = dateStyleMap[dKey].colorClass;
 
                     let colorClass = "";
