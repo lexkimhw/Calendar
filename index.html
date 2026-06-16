@@ -279,7 +279,6 @@
 
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
             
-            // 수업 요일 체크가 없을 경우 해당 문구 영역을 완전히 숨김 처리
             const displayWrapper = document.getElementById('displayDaysWrapper');
             if (selectedDays.length === 0) {
                 displayWrapper.style.display = 'none';
@@ -482,7 +481,6 @@
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
-            // 원본 화면 복구 준비
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
@@ -538,6 +536,9 @@
                 
                 '.standard-banner, .teacher-banner { font-size: 9.5px !important; padding-top: 2.5px !important; padding-bottom: 2.5px !important; font-weight: 800 !important; }' +
                 '.inner-month-title { font-size: 11px !important; font-weight: 800 !important; margin-bottom: 2px !important; }' +
+                
+                // 선생님 인쇄용 모드일 때 한글 월 정보 제목 숨기기 기능 추가
+                (isTeacherMode ? '.inner-month-title { display: none !important; } ' : '') +
                 
                 '#printFooter { border-top: 2px solid black !important; padding-top: 4px !important; margin-top: 5px !important; font-size: 11.5px !important; line-height: 1.4 !important; }' +
                 '#footerAlertRow { display: flex !important; flex-direction: column !important; width: 100% !important; }' +
