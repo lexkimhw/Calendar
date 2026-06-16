@@ -315,6 +315,7 @@
 
             const dateStyleMap = {}; 
             const monthBannerInfo = {}; 
+            const zeroMonthsList = new Set(); // 0회(수업료 없음) 설정된 달 목록 기록
 
             let dayIdx = 0;
             monthsOrder.forEach((currentMonth, mOrderIdx) => {
@@ -323,6 +324,10 @@
                 if (isCustom) {
                     const val = document.getElementById(`input_custom_${currentMonth}`).value;
                     targetCount = (val === '' || isNaN(val)) ? 0 : parseInt(val);
+                }
+
+                if (targetCount === 0 && isCustom) {
+                    zeroMonthsList.add(currentMonth);
                 }
 
                 if (currentMonth === 2 && targetCount > 0) {
@@ -459,7 +464,8 @@
                     if (legal.map[dKey]) bgClass = "bg-legal";
                     else if (academy.map[dKey]) bgClass = "bg-academy";
                     else if (prep.map[dKey]) bgClass = "bg-prep";
-                    else if (!bInfo.isZero && dateStyleMap[dKey]) bgClass = dateStyleMap[dKey].colorClass;
+                    // ★ 핵심 수정: 현재 출력 대상 달(month)이 0회(수업료 없음) 설정된 상태라면 다른 세션 색깔을 원천 무효화(배경 공백) 처리합니다.
+                    else if (!zeroMonthsList.has(month) && dateStyleMap[dKey]) bgClass = dateStyleMap[dKey].colorClass;
 
                     let colorClass = "";
                     if (dayOfWeek === 0) colorClass = "sun";
