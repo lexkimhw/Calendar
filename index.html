@@ -492,14 +492,13 @@
             let template = '<!DOCTYPE html><html><head><title>CLASS SCHEDULE PRINT</title>' +
                 '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"><\/script>' +
                 '<style>' +
-                // 상단 글자 잘림 방지를 위해 마진 규격을 확보하고 전체 높이를 100vh 및 overflow hidden 처리하여 강제 바인딩
                 'html, body { height: 100vh !important; overflow: hidden !important; background: white; font-family: sans-serif; padding: 0; margin: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
                 'h1 { font-size: 1.8rem !important; line-height: 1 !important; text-align: center !important; font-weight: 900 !important; tracking-tight: -0.025em !important; }' +
                 
-                // 인쇄 시 맨 위 공간 여백(margin-top)을 늘려 상단 잘림 해결
+                // 대폭 여백 확장 및 상단 잘림 원천 해결을 위한 타이틀 마진 조정
                 (isTeacherMode ? 
-                'h1.teacher-print-gap { margin-top: 35px !important; margin-bottom: 25px !important; } ' : 
-                'h1 { margin-top: 15px !important; margin-bottom: 8px !important; } ') + 
+                'h1.teacher-print-gap { margin-top: 45px !important; margin-bottom: 25px !important; } ' : 
+                'h1 { margin-top: 25px !important; margin-bottom: 10px !important; } ') + 
                 
                 '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
                 '.session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }' +
@@ -513,27 +512,27 @@
                 
                 (isTeacherMode ? 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' : '') + 
                 
-                // 푸터 글씨 확대에 부응하여 달력 카드의 세로 row-gap을 컴팩트하게 재정비 (줄밀림 완벽 차단)
+                // 상단 여백 확대로 인한 줄밀림을 구조적으로 차단하기 위해 카드 배치 간격(row-gap)을 세밀화 
                 (isTeacherMode ? 
-                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 6px 12px !important; row-gap: 20px !important; }' : 
-                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 6px 12px !important; row-gap: 6px !important; }') + 
+                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 6px 12px !important; row-gap: 15px !important; }' : 
+                '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 6px 12px !important; row-gap: 4px !important; }') + 
                 
                 '.print-card-layout { border: 1px solid #d1d5db !important; padding: 4px 4px !important; border-radius: 5px !important; page-break-inside: avoid; background-color: white !important; }' +
-                'table { font-size: 9px !important; font-weight: 600 !important; }' +
+                'table { font-size: 8.8px !important; font-weight: 600 !important; }' +
                 
+                // 상단 공간 확보와 푸터 큰 폰트를 균형 있게 받쳐주는 날짜 셀 높이(height) 초정밀 미세 세팅
                 (isTeacherMode ? 
                 'td div { height: 23px !important; width: 23px !important; font-size: 10.5px !important; line-height: 23px !important; margin: auto; }' : 
-                'td div { height: 18.5px !important; width: 18.5px !important; font-size: 9.2px !important; line-height: 18.5px !important; margin: auto; }') + 
+                'td div { height: 17.8px !important; width: 17.8px !important; font-size: 9px !important; line-height: 17.8px !important; margin: auto; }') + 
                 
-                '.standard-banner, .teacher-banner { font-size: 10px !important; padding-top: 3px !important; padding-bottom: 3px !important; font-weight: 800 !important; }' +
+                '.standard-banner, .teacher-banner { font-size: 9.5px !important; padding-top: 2.5px !important; padding-bottom: 2.5px !important; font-weight: 800 !important; }' +
                 '.inner-month-title { font-size: 11px !important; font-weight: 800 !important; margin-bottom: 2px !important; }' +
                 
-                // 요청사항 반영: 맨 아래 유의사항 문구 폰트 크기를 11.5px로 눈에 띄게 키우고 여백 조율
-                '#printFooter { border-top: 2px solid black !important; padding-top: 4px !important; margin-top: 6px !important; font-size: 11.5px !important; line-height: 1.4 !important; }' +
+                '#printFooter { border-top: 2px solid black !important; padding-top: 4px !important; margin-top: 5px !important; font-size: 11.5px !important; line-height: 1.4 !important; }' +
                 '#footerAlertRow { display: flex !important; flex-direction: column !important; width: 100% !important; }' +
                 
-                // 인쇄 용지 자체 여백에서 상단(top) 여백을 최소 4mm 이상 주어 프린터 출력 한계선 돌파 방지
-                '@media print { @page { size: A4 portrait; margin: 5mm 3mm 1mm 3mm; } body { padding: 0; margin: 0; } }' +
+                // 요구사항 반영: 인쇄 페이지 자체의 상단 빈 세로 여백을 기존 5mm에서 12mm로 2배 이상 과감히 확대 조정
+                '@media print { @page { size: A4 portrait; margin: 12mm 3mm 1mm 3mm; } body { padding: 0; margin: 0; } }' +
                 '</style></head><body>' +
                 '<div class="w-full px-1">' + htmlContent + '</div>' +
                 '<script>' +
