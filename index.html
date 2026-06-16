@@ -278,6 +278,15 @@
             document.getElementById('mainTitle').innerText = `${baseYear} CLASS SCHEDULE`;
 
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
+            
+            // 수업 요일 체크가 없을 경우 해당 문구 영역을 완전히 숨김 처리
+            const displayWrapper = document.getElementById('displayDaysWrapper');
+            if (selectedDays.length === 0) {
+                displayWrapper.style.display = 'none';
+            } else {
+                displayWrapper.style.display = 'block';
+            }
+
             const weekNames = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금'};
             const engNames = {1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri'};
             
@@ -454,6 +463,7 @@
         function printScheduler() {
             const isTeacherMode = document.getElementById("teacherModeCheck").checked;
             const mainTitleEl = document.getElementById("mainTitle");
+            const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
             
             if(isTeacherMode) {
                 document.getElementById("lblLegal").innerText = "National Holidays";
@@ -472,11 +482,18 @@
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
+            // 원본 화면 복구 준비
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
             document.getElementById("feePaymentNotice").style.display = "block";
-            document.getElementById("displayDaysWrapper").style.display = "block";
+            
+            if (selectedDays.length === 0) {
+                document.getElementById("displayDaysWrapper").style.display = "none";
+            } else {
+                document.getElementById("displayDaysWrapper").style.display = "block";
+            }
+            
             document.getElementById("printFooter").style.display = "block";
             mainTitleEl.classList.remove("teacher-print-gap");
             
