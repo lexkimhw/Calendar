@@ -121,7 +121,7 @@
                     <div class="bg-white p-1.5 rounded border border-gray-300 shadow-xs flex flex-col items-center">
                         <span class="text-[11px] font-bold block mb-1 text-gray-700">${m}월</span>
                         <input type="checkbox" id="chk_custom_${m}" class="month-custom-toggle mb-1" onchange="toggleMonthInput(${m})">
-                        <input type="number" id="input_custom_${m}" disabled min="1" max="20" value="8" 
+                        <input type="number" id="input_custom_${m}" disabled min="0" max="20" value="8" 
                             class="w-12 border text-center text-xs p-0.5 rounded font-bold bg-gray-100" onchange="calculateSchedule()">
                     </div>`;
             });
@@ -182,7 +182,7 @@
 
                         if(data.customCounts) {
                             monthsOrder.forEach(m => {
-                                if(data.customCounts[m]) {
+                                if(data.customCounts[m] !== undefined) {
                                     document.getElementById(`chk_custom_${m}`).checked = true;
                                     const input = document.getElementById(`input_custom_${m}`);
                                     input.disabled = false;
@@ -210,7 +210,7 @@
             const customCounts = {};
             monthsOrder.forEach(m => {
                 if(document.getElementById(`chk_custom_${m}`).checked) {
-                    customCounts[m] = parseInt(document.getElementById(`input_custom_${m}`).value) || 8;
+                    customCounts[m] = parseInt(document.getElementById(`input_custom_${m}`).value);
                 }
             });
 
@@ -319,9 +319,13 @@
             let dayIdx = 0;
             monthsOrder.forEach((currentMonth, mOrderIdx) => {
                 const isCustom = document.getElementById(`chk_custom_${currentMonth}`).checked;
-                let targetCount = isCustom ? (parseInt(document.getElementById(`input_custom_${currentMonth}`).value) || defaultCutCount) : defaultCutCount;
+                let targetCount = defaultCutCount;
+                if (isCustom) {
+                    const val = document.getElementById(`input_custom_${currentMonth}`).value;
+                    targetCount = (val === '' || isNaN(val)) ? 0 : parseInt(val);
+                }
 
-                if (currentMonth === 2) {
+                if (currentMonth === 2 && targetCount > 0) {
                     let remainingCount = globalClassDays.length - dayIdx;
                     if (remainingCount > 0) targetCount = remainingCount;
                 }
@@ -333,14 +337,23 @@
                     dayIdx++;
                 }
 
-                const isCustomDiff = (currentSessionDays.length !== defaultCutCount);
+                const isCustomDiff = (isCustom && targetCount !== defaultCutCount);
 
                 if (selectedDays.length === 0) {
                     monthBannerInfo[currentMonth] = {
                         text: "",
                         bgClass: "custom-no-days",
                         count: 0,
-                        isCustomDiff: false
+                        isCustomDiff: false,
+                        isZero: false
+                    };
+                } else if (isCustom && targetCount === 0) {
+                    monthBannerInfo[currentMonth] = {
+                        text: `${currentMonth}월 기간: 수업료 없음`,
+                        bgClass: "bg-gray-200",
+                        count: 0,
+                        isCustomDiff: true,
+                        isZero: true
                     };
                 } else if (currentSessionDays.length > 0) {
                     const colorClass = ((mOrderIdx + 1) % 2 !== 0) ? "session-odd" : "session-even";
@@ -355,27 +368,34 @@
                         text: `${currentMonth}월 기간: ` + infoText, 
                         bgClass: colorClass, 
                         count: currentSessionDays.length,
-                        isCustomDiff: isCustomDiff 
+                        isCustomDiff: isCustomDiff,
+                        isZero: false
                     };
                 } else {
                     monthBannerInfo[currentMonth] = { 
                         text: `${currentMonth}월 기간: 수업 없음`, 
                         bgClass: "bg-gray-200", 
                         count: 0,
-                        isCustomDiff: isCustomDiff 
+                        isCustomDiff: isCustomDiff,
+                        isZero: false
                     };
                 }
             });
 
-            let line1 = "※ Progress Report는 9월초, 3월초에 학생에게 전달(재원생/신규생은 8월말 또는 내년 2월말 기준으로 이전 2달이상 수강한 학생 기준으로 성적표 작성됨)";
+            let line1 = "※ Progress Report는 9월초, 3월초에 학생에게 전달합니다. (재원생/신규생은 8월말 또는 내년 2월말 기준으로 이전 2달이상 수강한 학생 기준으로 성적표 작성됨)";
             let line2 = "※ 매월 20일 수강료 안내 및 납부 기간은 매월 25일부터 말일까지 입니다.";
 
             if (selectedDays.length !== 0) {
                 let customCheckedMonths = [];
                 monthsOrder.forEach(m => {
                     if(m !== 2 && document.getElementById(`chk_custom_${m}`).checked) {
-                        const customVal = document.getElementById(`input_custom_${m}`).value || defaultCutCount;
-                        customCheckedMonths.push(`${m}월(${customVal}회)`);
+                        const val = document.getElementById(`input_custom_${m}`).value;
+                        const customVal = (val === '' || isNaN(val)) ? 0 : parseInt(val);
+                        if (customVal === 0) {
+                            customCheckedMonths.push(`${m}월(수업료 없음)`);
+                        } else {
+                            customCheckedMonths.push(`${m}월(${customVal}회)`);
+                        }
                     }
                 });
 
@@ -406,7 +426,7 @@
                 const currYear = (month < 3) ? baseYear + 1 : baseYear;
                 const firstDayIdx = new Date(currYear, month - 1, 1).getDay();
                 const lastDateNum = new Date(currYear, month, 0).getDate();
-                const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200", isCustomDiff: false };
+                const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200", isCustomDiff: false, isZero: false };
 
                 const borderClass = bInfo.isCustomDiff ? "border-2 border-dashed border-red-500 rounded" : "rounded";
                 const dataDiffAttr = bInfo.isCustomDiff ? "data-custom-diff='true'" : "";
@@ -439,7 +459,7 @@
                     if (legal.map[dKey]) bgClass = "bg-legal";
                     else if (academy.map[dKey]) bgClass = "bg-academy";
                     else if (prep.map[dKey]) bgClass = "bg-prep";
-                    else if (dateStyleMap[dKey]) bgClass = dateStyleMap[dKey].colorClass;
+                    else if (!bInfo.isZero && dateStyleMap[dKey]) bgClass = dateStyleMap[dKey].colorClass;
 
                     let colorClass = "";
                     if (dayOfWeek === 0) colorClass = "sun";
