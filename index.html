@@ -344,16 +344,37 @@
                 }
             });
 
-            let alertMsg = "※ 매월 20일 수강료 안내 및 납부 기간은 매월 25일부터 말일까지 입니다.";
-            let customCheckedMonths = [];
-            monthsOrder.forEach(m => {
-                if(document.getElementById(`chk_custom_${m}`).checked) customCheckedMonths.push(`${m}월`);
-            });
-            const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
-            if (customCheckedMonths.length > 0 || febFinalCount !== defaultCutCount) {
-                alertMsg = `※ (${customCheckedMonths.join(', ') || ''}) 및 2월(${febFinalCount}회) 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내 및 납부 기간은 매월 25일부터 말일까지 입니다.)`;
-            }
-            document.getElementById('alertFooter').innerText = alertMsg;
+let alertMsg = "※ 매월 20일 수강료 안내 및 납부 기간은 매월 25일부터 말일까지 입니다.";
+let customCheckedMonths = [];
+
+monthsOrder.forEach(m => {
+    // 2월은 하단에서 별도로 처리하므로 2월을 제외한 달만 체크박스 확인
+    if(m !== 2 && document.getElementById(`chk_custom_${m}`).checked) {
+        const customVal = document.getElementById(`input_custom_${m}`).value || defaultCutCount;
+        customCheckedMonths.push(`${m}월(${customVal}회)`);
+    }
+});
+
+const febFinalCount = monthBannerInfo[2] ? monthBannerInfo[2].count : 0;
+
+// 변경된 달이 있거나, 2월의 최종 횟수가 기본 횟수(4회 또는 8회)와 다를 때 메시지 변경
+if (customCheckedMonths.length > 0 || febFinalCount !== defaultCutCount) {
+    let targetMonthsText = "";
+    
+    if (customCheckedMonths.length > 0) {
+        targetMonthsText = customCheckedMonths.join(', ');
+        // 개별 변경된 달이 있고 2월도 정규 회차와 다르면 뒤에 2월을 붙여줌
+        if (febFinalCount !== defaultCutCount) {
+            targetMonthsText += ` 및 2월(${febFinalCount}회)`;
+        }
+    } else {
+        // 다른 달은 없고 2월만 다를 경우
+        targetMonthsText = `2월(${febFinalCount}회)`;
+    }
+
+    alertMsg = `※ ${targetMonthsText} 수강료 횟수가 정규 회차와 다르오니 확인 바랍니다. (매월 20일 수강료 안내 및 납부 기간은 매월 25일부터 말일까지 입니다.)`;
+}
+document.getElementById('alertFooter').innerText = alertMsg;
 
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
