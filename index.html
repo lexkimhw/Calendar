@@ -329,6 +329,9 @@
                     dayIdx++;
                 }
 
+                // 변경된 달인지 체크 (기본 수강횟수와 배정 횟수가 다른 경우)
+                const isCustomDiff = (currentSessionDays.length !== defaultCutCount);
+
                 if (currentSessionDays.length > 0) {
                     const colorClass = ((mOrderIdx + 1) % 2 !== 0) ? "session-odd" : "session-even";
                     const firstDay = currentSessionDays[0]; 
@@ -338,9 +341,19 @@
                     currentSessionDays.forEach(day => {
                         dateStyleMap[day.dateKey] = { colorClass: colorClass };
                     });
-                    monthBannerInfo[currentMonth] = { text: `${currentMonth}월 기간: ` + infoText, bgClass: colorClass, count: currentSessionDays.length };
+                    monthBannerInfo[currentMonth] = { 
+                        text: `${currentMonth}월 기간: ` + infoText, 
+                        bgClass: colorClass, 
+                        count: currentSessionDays.length,
+                        isCustomDiff: isCustomDiff 
+                    };
                 } else {
-                    monthBannerInfo[currentMonth] = { text: `${currentMonth}월 기간: 수업 없음`, bgClass: "bg-gray-200", count: 0 };
+                    monthBannerInfo[currentMonth] = { 
+                        text: `${currentMonth}월 기간: 수업 없음`, 
+                        bgClass: "bg-gray-200", 
+                        count: 0,
+                        isCustomDiff: isCustomDiff 
+                    };
                 }
             });
 
@@ -387,13 +400,17 @@ if (selectedDays.length === 0) {
                 const currYear = (month < 3) ? baseYear + 1 : baseYear;
                 const firstDayIdx = new Date(currYear, month - 1, 1).getDay();
                 const lastDateNum = new Date(currYear, month, 0).getDate();
-                const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200" };
+                const bInfo = monthBannerInfo[month] || { text: `${month}월 기간: 수업 없음`, bgClass: "bg-gray-200", isCustomDiff: false };
+
+                // 횟수가 다른 달은 빨간 대시선 테두리 양식 추가
+                const borderClass = bInfo.isCustomDiff ? "border-2 border-dashed border-red-500 rounded" : "rounded";
+                const dataDiffAttr = bInfo.isCustomDiff ? "data-custom-diff='true'" : "";
 
                 let html = `
                     <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm">
                         <div>
-                            <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 rounded text-black mb-1.5 standard-banner">${bInfo.text}</div>
-                            <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 rounded text-black mb-1.5 hidden teacher-banner">${engMonthNames[month]} ${currYear}</div>
+                            <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 text-black mb-1.5 standard-banner ${borderClass}" ${dataDiffAttr}>${bInfo.text}</div>
+                            <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 text-black mb-1.5 hidden teacher-banner ${borderClass}" ${dataDiffAttr}>${engMonthNames[month]} ${currYear}</div>
                             
                             <div class="text-center font-bold text-xs text-gray-600 mb-1">${currYear}년 ${month}월</div>
                             <table class="w-full text-[10px] text-center border-collapse">
@@ -513,7 +530,7 @@ if (selectedDays.length === 0) {
                 // 1. 대제목과 헤더행 사이 공백(margin-bottom) 분리 계산
                 (isTeacherMode ? 
                 'h1.teacher-print-gap { margin-top: 50px !important; margin-bottom: 60px !important; } ' : 
-                'h1 { margin-top: 5px !important; margin-bottom: 8px !important; } ') + // 일반 출력 시 타이틀 마진을 극도로 줄여서 1장 완성 확보
+                'h1 { margin-top: 5px !important; margin-bottom: 8px !important; } ') + 
                 
                 '.sat { color: #2563eb !important; } .sun { color: #dc2626 !important; }' +
                 '.session-odd { background-color: #bbf7d0 !important; color: black !important; border: 1px solid #86efac !important; }' +
@@ -523,9 +540,12 @@ if (selectedDays.length === 0) {
                 '.bg-prep { background-color: #a1a1aa !important; color: white !important; }' +
                 'th { font-weight: bold !important; color: #4b5563 !important; }' +
                 
+                // 인쇄 시 변경 수강료 박스 점선 인쇄 테두리 처리 스타일 강제 주입
+                '.custom-diff-banner { border: 2px dashed #dc2626 !important; border-radius: 4px !important; }' +
+                
                 (isTeacherMode ? 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' : '') + 
                 
-                // 2. 가로/세로 간격 완벽 분리 (일반 인쇄 모드는 row-gap: 12px 및 여백 조정을 통해 한 장으로 강제 유도)
+                // 2. 가로/세로 간격 완벽 분리
                 (isTeacherMode ? 
                 '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 65px !important; }' : 
                 '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 5px 12px !important; row-gap: 12px !important; }') + 
@@ -549,6 +569,9 @@ if (selectedDays.length === 0) {
                 '  grid.className = "print-grid-layout";' +
                 '  const cards = grid.querySelectorAll(".print-card");' +
                 '  cards.forEach(c => c.className = "print-card-layout flex flex-col justify-between");' +
+                '  ' +
+                '  const diffBanners = grid.querySelectorAll("[data-custom-diff=\'true\']");' +
+                '  diffBanners.forEach(b => b.classList.add("custom-diff-banner"));' +
                 '}' +
                 'const footerRow = document.querySelector("#printFooter > div");' +
                 'if(footerRow) footerRow.className = "flex-justify";' +
