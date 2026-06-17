@@ -103,7 +103,6 @@
     <script>
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
-        // 개별설정 UI는 2월을 제외한 3월~익년 1월까지만 생성
         const customUIMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1];
         const engMonthNames = {
             1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
@@ -196,7 +195,7 @@
                                         input.value = data.customCounts[m];
                                         input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-amber-50 border-amber-400";
                                     }
-                                                            }
+                                }
                             });
                         }
                     } else {
@@ -289,10 +288,11 @@
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
             
             const displayWrapper = document.getElementById('displayDaysWrapper');
+            // 요일이 없을 때 공간 유지를 위해 비가시성(invisible) 처리로 변경
             if (selectedDays.length === 0) {
-                displayWrapper.style.display = 'none';
+                displayWrapper.style.visibility = 'hidden';
             } else {
-                displayWrapper.style.display = 'block';
+                displayWrapper.style.visibility = 'visible';
             }
 
             const weekNames = {1:'월', 2:'화', 3:'수', 4:'목', 5:'금'};
@@ -330,7 +330,6 @@
 
             monthsOrder.forEach((currentMonth, mOrderIdx) => {
                 const chk = document.getElementById(`chk_custom_${currentMonth}`);
-                // 2월은 항상 개별설정이 꺼진 것(false)으로 취급
                 const isCustom = chk ? chk.checked : false;
                 
                 let targetCount = defaultCutCount;
@@ -351,7 +350,6 @@
                     dayIdx++;
                 }
 
-                // 점선 테두리 조건: (개별 설정이 켜져 있거나 2월인 경우) 동시에 최종 배정 횟수가 기본 설정(4회/8회)과 다른 경우
                 const isCustomDiff = ((isCustom || currentMonth === 2) && targetCount !== defaultCutCount);
 
                 if (selectedDays.length === 0) {
@@ -446,12 +444,22 @@
                 const borderClass = bInfo.isCustomDiff ? "border-2 border-dashed border-red-500 rounded" : "rounded";
                 const dataDiffAttr = bInfo.isCustomDiff ? "data-custom-diff='true'" : "";
 
+                // 요일이 없을 때 공간 유지를 위한 투명 배너 스타일 분기 처리
+                let bannerHtml = "";
+                if (selectedDays.length === 0) {
+                    bannerHtml = `
+                        <div class="text-[10px] py-1 mb-1.5 standard-banner ${borderClass} opacity-0 bg-transparent text-transparent" ${dataDiffAttr}>&nbsp;</div>
+                        <div class="text-[10px] py-1 mb-1.5 hidden teacher-banner ${borderClass} opacity-0 bg-transparent text-transparent" ${dataDiffAttr}>&nbsp;</div>`;
+                } else {
+                    bannerHtml = `
+                        <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 text-black mb-1.5 standard-banner ${borderClass}" ${dataDiffAttr}>${bInfo.text}</div>
+                        <div class="${bInfo.bgClass === 'custom-no-days' ? 'bg-transparent border-none' : bInfo.bgClass} text-[10px] font-black text-center py-1 text-black mb-1.5 hidden teacher-banner ${borderClass}" ${dataDiffAttr}>${engMonthNames[month]} ${currYear}</div>`;
+                }
+
                 let html = `
                     <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm" data-month="${month}">
                         <div>
-                            <div class="${bInfo.bgClass} text-[10px] font-black text-center py-1 text-black mb-1.5 standard-banner ${borderClass}" ${dataDiffAttr}>${bInfo.text}</div>
-                            <div class="${bInfo.bgClass === 'custom-no-days' ? 'bg-transparent border-none' : bInfo.bgClass} text-[10px] font-black text-center py-1 text-black mb-1.5 hidden teacher-banner ${borderClass}" ${dataDiffAttr}>${engMonthNames[month]} ${currYear}</div>
-                            
+                            ${bannerHtml}
                             <div class="text-center font-bold text-xs text-gray-600 mb-1 inner-month-title">${currYear}년 ${month}월</div>
                             <table class="w-full text-[10px] text-center border-collapse">
                                 <thead>
@@ -512,7 +520,9 @@
                 document.getElementById("lblAcademy").innerText = "School Vacations";
                 document.getElementById("noClassNotice").style.display = "none";
                 document.getElementById("feePaymentNotice").style.display = "none";
-                document.getElementById("displayDaysWrapper").style.display = "none";
+                
+                // 선생님용 폼에서 숨길 대상을 감추는 대신 자리를 차지하게 hidden 처리
+                document.getElementById("displayDaysWrapper").style.visibility = "hidden";
                 document.getElementById("printFooter").style.display = "none";
                 
                 mainTitleEl.classList.add("teacher-print-gap");
@@ -540,15 +550,16 @@
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
+            // 출력 완료 후 원상복구 로직
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
             document.getElementById("feePaymentNotice").style.display = "block";
             
             if (selectedDays.length === 0) {
-                document.getElementById("displayDaysWrapper").style.display = "none";
+                document.getElementById("displayDaysWrapper").style.visibility = "hidden";
             } else {
-                document.getElementById("displayDaysWrapper").style.display = "block";
+                document.getElementById("displayDaysWrapper").style.visibility = "visible";
             }
             
             document.getElementById("printFooter").style.display = "block";
@@ -581,7 +592,10 @@
                 
                 '.custom-diff-banner { border: 2px dashed #dc2626 !important; border-radius: 4px !important; } ' +
                 
-                (isTeacherMode ? 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' : '') + 
+                // 선생님 모드일 때 기간 표시 영역 투명 및 공간 확보 스타일정의
+                (isTeacherMode ? 
+                'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' +
+                '.teacher-banner { background-color: transparent !important; color: transparent !important; border-color: transparent !important; } ' : '') + 
                 
                 (isTeacherMode ? 
                 '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px 10px !important; row-gap: 20px !important; width: 100% !important; box-sizing: border-box !important; } ' : 
@@ -594,11 +608,11 @@
                 'td div { height: 23px !important; width: 23px !important; font-size: 10.5px !important; line-height: 23px !important; margin: auto; } ' : 
                 'td div { height: 18.5px !important; width: 18.5px !important; font-size: 9.2px !important; line-height: 18.5px !important; margin: auto; } ') + 
                 
-                '.standard-banner, .teacher-banner { font-size: 10px !important; padding-top: 3px !important; padding-bottom: 3px !important; font-weight: 800 !important; } ' +
+                '.standard-banner, .teacher-banner { font-size: 10px !important; padding-top: 3px !important; padding-bottom: 3px !important; font-weight: 800 !important; height: 22px !important; box-sizing: border-box !important; } ' +
                 '.inner-month-title { font-size: 11px !important; font-weight: 800 !important; margin-bottom: 2px !important; } ' +
                 
                 (isTeacherMode ? '.inner-month-title { display: none !important; } ' : '') +
-                '.custom-no-days { background-color: transparent !important; border: none !important; } ' +
+                '.custom-no-days { background-color: transparent !important; border: none !important; color: transparent !important; } ' +
                 
                 '#printFooter { border-top: 2px solid black !important; padding-top: 4px !important; margin-top: 6px !important; font-size: 11.5px !important; line-height: 1.4 !important; } ' +
                 '#footerAlertRow { display: flex !important; flex-direction: column !important; width: 100% !important; } ' +
