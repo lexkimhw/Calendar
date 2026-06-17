@@ -288,7 +288,6 @@
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(c => parseInt(c.value));
             
             const displayWrapper = document.getElementById('displayDaysWrapper');
-            // 요일이 없을 때 공간 유지를 위해 비가시성(invisible) 처리로 변경
             if (selectedDays.length === 0) {
                 displayWrapper.style.visibility = 'hidden';
             } else {
@@ -444,7 +443,6 @@
                 const borderClass = bInfo.isCustomDiff ? "border-2 border-dashed border-red-500 rounded" : "rounded";
                 const dataDiffAttr = bInfo.isCustomDiff ? "data-custom-diff='true'" : "";
 
-                // 요일이 없을 때 공간 유지를 위한 투명 배너 스타일 분기 처리
                 let bannerHtml = "";
                 if (selectedDays.length === 0) {
                     bannerHtml = `
@@ -521,7 +519,6 @@
                 document.getElementById("noClassNotice").style.display = "none";
                 document.getElementById("feePaymentNotice").style.display = "none";
                 
-                // 선생님용 폼에서 숨길 대상을 감추는 대신 자리를 차지하게 hidden 처리
                 document.getElementById("displayDaysWrapper").style.visibility = "hidden";
                 document.getElementById("printFooter").style.display = "none";
                 
@@ -550,7 +547,6 @@
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
-            // 출력 완료 후 원상복구 로직
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
@@ -592,10 +588,10 @@
                 
                 '.custom-diff-banner { border: 2px dashed #dc2626 !important; border-radius: 4px !important; } ' +
                 
-                // 선생님 모드일 때 기간 표시 영역 투명 및 공간 확보 스타일정의
+                // 선생님 모드일 때 투명 배경과 선명한 텍스트 컬러 지정 (배경 투명화 및 테두리만 제거)
                 (isTeacherMode ? 
                 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' +
-                '.teacher-banner { background-color: transparent !important; color: transparent !important; border-color: transparent !important; } ' : '') + 
+                '.teacher-banner { background-color: transparent !important; color: black !important; border-color: transparent !important; } ' : '') + 
                 
                 (isTeacherMode ? 
                 '.print-grid-layout { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px 10px !important; row-gap: 20px !important; width: 100% !important; box-sizing: border-box !important; } ' : 
