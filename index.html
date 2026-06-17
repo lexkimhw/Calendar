@@ -455,7 +455,7 @@
                 }
 
                 let html = `
-                    <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm" data-month="${month}">
+                    <div class="print-card bg-white p-2.5 rounded border border-gray-200 flex flex-col justify-between shadow-sm" data-month="${month}" data-year="${currYear}">
                         <div>
                             ${bannerHtml}
                             <div class="text-center font-bold text-xs text-gray-600 mb-1 inner-month-title">${currYear}년 ${month}월</div>
@@ -530,6 +530,14 @@
                 
                 document.querySelectorAll(".print-card").forEach(card => {
                     const monthAttr = card.getAttribute("data-month");
+                    const yearAttr = card.getAttribute("data-year");
+                    
+                    // 선생님 인쇄 전용: 국문 타이틀 요소를 영문 타이틀(ex: March 2026)로 내용 직접 치환
+                    const titleEl = card.querySelector(".inner-month-title");
+                    if (titleEl) {
+                        titleEl.innerText = `${engMonthNames[monthAttr]} ${yearAttr}`;
+                    }
+
                     const dueEl = card.querySelector(".teacher-due-date");
                     if (dueEl) {
                         if (monthAttr === "8") {
@@ -547,6 +555,7 @@
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
+            // 출력 완료(또는 팝업생성) 후 메인 화면을 위한 완벽한 국문 원상복구
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
@@ -565,6 +574,16 @@
             document.querySelectorAll(".teacher-banner").forEach(el => el.style.display = "none");
             document.querySelectorAll(".monthly-holiday-list").forEach(el => el.style.display = "block");
             document.querySelectorAll(".teacher-due-date").forEach(el => el.style.display = "none");
+            
+            // 메인 폼의 타이틀 이름들도 다시 국문(X년 X월)으로 원복
+            document.querySelectorAll(".print-card").forEach(card => {
+                const monthAttr = card.getAttribute("data-month");
+                const yearAttr = card.getAttribute("data-year");
+                const titleEl = card.querySelector(".inner-month-title");
+                if (titleEl) {
+                    titleEl.innerText = `${yearAttr}년 ${monthAttr}월`;
+                }
+            });
 
             const printWindow = window.open("", "_blank", "width=1200,height=900");
             
@@ -588,7 +607,6 @@
                 
                 '.custom-diff-banner { border: 2px dashed #dc2626 !important; border-radius: 4px !important; } ' +
                 
-                // 선생님 모드일 때 투명 배경과 선명한 텍스트 컬러 지정 (배경 투명화 및 테두리만 제거)
                 (isTeacherMode ? 
                 'td div.session-odd, td div.session-even { background-color: white !important; border: none !important; color: black !important; } ' +
                 '.teacher-banner { background-color: transparent !important; color: black !important; border-color: transparent !important; } ' : '') + 
@@ -607,7 +625,8 @@
                 '.standard-banner, .teacher-banner { font-size: 10px !important; padding-top: 3px !important; padding-bottom: 3px !important; font-weight: 800 !important; height: 22px !important; box-sizing: border-box !important; } ' +
                 '.inner-month-title { font-size: 11px !important; font-weight: 800 !important; margin-bottom: 2px !important; } ' +
                 
-                (isTeacherMode ? '.inner-month-title { display: none !important; } ' : '') +
+                // 선생님 모드일 때 국문 타이틀(.inner-month-title) 숨김 처리를 제거하고 영문으로 치환된 텍스트가 인쇄되도록 허용
+                (isTeacherMode ? '.inner-month-title { display: block !important; } ' : '') +
                 '.custom-no-days { background-color: transparent !important; border: none !important; color: transparent !important; } ' +
                 
                 '#printFooter { border-top: 2px solid black !important; padding-top: 4px !important; margin-top: 6px !important; font-size: 11.5px !important; line-height: 1.4 !important; } ' +
