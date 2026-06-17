@@ -48,8 +48,8 @@
         </div>
 
         <div class="mb-4 p-4 bg-gray-100 rounded-lg border border-gray-300">
-            <label class="block text-xs font-bold text-gray-800 mb-2">📅 특정 달만 수강 횟수 개별 변경 설정</label>
-            <div id="monthCustomContainer" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-2 text-center"></div>
+            <label class="block text-xs font-bold text-gray-800 mb-2">📅 특정 달만 수강 횟수 개별 변경 설정 (3월 ~ 익년 1월)</label>
+            <div id="monthCustomContainer" class="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-11 gap-2 text-center"></div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -103,6 +103,8 @@
     <script>
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
+        // 개별설정 UI는 2월을 제외한 3월~익년 1월까지만 생성
+        const customUIMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1];
         const engMonthNames = {
             1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
             7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"
@@ -116,7 +118,7 @@
         function initMonthCustomUI() {
             const container = document.getElementById('monthCustomContainer');
             container.innerHTML = '';
-            monthsOrder.forEach(m => {
+            customUIMonths.forEach(m => {
                 container.innerHTML += `
                     <div class="bg-white p-1.5 rounded border border-gray-300 shadow-xs flex flex-col items-center">
                         <span class="text-[11px] font-bold block mb-1 text-gray-700">${m}월</span>
@@ -130,11 +132,11 @@
         function toggleMonthInput(m) {
             const chk = document.getElementById(`chk_custom_${m}`);
             const input = document.getElementById(`input_custom_${m}`);
-            if(chk.checked) {
+            if(chk && chk.checked) {
                 input.disabled = false;
                 input.classList.remove('bg-gray-100');
                 input.classList.add('bg-amber-50', 'border-amber-400');
-            } else {
+            } else if(chk) {
                 input.disabled = true;
                 input.classList.remove('bg-amber-50', 'border-amber-400');
                 input.classList.add('bg-gray-100');
@@ -151,12 +153,15 @@
             document.getElementById('legalHolidays').value = '';
             document.getElementById('academyHolidays').value = '';
             document.getElementById('prepDays').value = '';
-            monthsOrder.forEach(m => {
-                document.getElementById(`chk_custom_${m}`).checked = false;
+            customUIMonths.forEach(m => {
+                const chk = document.getElementById(`chk_custom_${m}`);
+                if(chk) chk.checked = false;
                 const input = document.getElementById(`input_custom_${m}`);
-                input.disabled = true;
-                input.value = (Array.from(document.querySelectorAll('.day-check:checked')).length === 1) ? 4 : 8;
-                input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-gray-100";
+                if(input) {
+                    input.disabled = true;
+                    input.value = (Array.from(document.querySelectorAll('.day-check:checked')).length === 1) ? 4 : 8;
+                    input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-gray-100";
+                }
             });
         }
 
@@ -181,14 +186,17 @@
                         document.getElementById('chk_fri').checked = targetDays.includes(5);
 
                         if(data.customCounts) {
-                            monthsOrder.forEach(m => {
+                            customUIMonths.forEach(m => {
                                 if(data.customCounts[m] !== undefined) {
-                                    document.getElementById(`chk_custom_${m}`).checked = true;
+                                    const chk = document.getElementById(`chk_custom_${m}`);
                                     const input = document.getElementById(`input_custom_${m}`);
-                                    input.disabled = false;
-                                    input.value = data.customCounts[m];
-                                    input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-amber-50 border-amber-400";
-                                }
+                                    if(chk && input) {
+                                        chk.checked = true;
+                                        input.disabled = false;
+                                        input.value = data.customCounts[m];
+                                        input.className = "w-12 border text-center text-xs p-0.5 rounded font-bold bg-amber-50 border-amber-400";
+                                    }
+                                                            }
                             });
                         }
                     } else {
@@ -208,8 +216,9 @@
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(cb => parseInt(cb.value));
             
             const customCounts = {};
-            monthsOrder.forEach(m => {
-                if(document.getElementById(`chk_custom_${m}`).checked) {
+            customUIMonths.forEach(m => {
+                const chk = document.getElementById(`chk_custom_${m}`);
+                if(chk && chk.checked) {
                     customCounts[m] = parseInt(document.getElementById(`input_custom_${m}`).value);
                 }
             });
@@ -317,10 +326,13 @@
             const monthBannerInfo = {}; 
 
             let dayIdx = 0;
-            let activeSessionOrder = 0; // ★ 유효한 세션이 생성될 때만 증가하는 독립 카운터 도입
+            let activeSessionOrder = 0; 
 
             monthsOrder.forEach((currentMonth, mOrderIdx) => {
-                const isCustom = document.getElementById(`chk_custom_${currentMonth}`).checked;
+                const chk = document.getElementById(`chk_custom_${currentMonth}`);
+                // 2월은 항상 개별설정이 꺼진 것(false)으로 취급
+                const isCustom = chk ? chk.checked : false;
+                
                 let targetCount = defaultCutCount;
                 if (isCustom) {
                     const val = document.getElementById(`input_custom_${currentMonth}`).value;
@@ -339,7 +351,8 @@
                     dayIdx++;
                 }
 
-                const isCustomDiff = (isCustom && targetCount !== defaultCutCount);
+                // 점선 테두리 조건: (개별 설정이 켜져 있거나 2월인 경우) 동시에 최종 배정 횟수가 기본 설정(4회/8회)과 다른 경우
+                const isCustomDiff = ((isCustom || currentMonth === 2) && targetCount !== defaultCutCount);
 
                 if (selectedDays.length === 0) {
                     monthBannerInfo[currentMonth] = {
@@ -353,12 +366,11 @@
                         text: `${currentMonth}월 기간: 수업료 없음`,
                         bgClass: "bg-gray-200",
                         count: 0,
-                        isCustomDiff: true
+                        isCustomDiff: isCustomDiff
                     };
                 } else if (currentSessionDays.length > 0) {
-                    activeSessionOrder++; // ★ 실제 수업 일수가 있는 유효한 세션일 때만 순서 카운트 증가
+                    activeSessionOrder++; 
                     
-                    // 순서에 맞춰 완벽하게 핑퐁 교대 (1: 초록색, 2: 분홍색, 3: 초록색, ...)
                     const colorClass = (activeSessionOrder % 2 !== 0) ? "session-odd" : "session-even";
                     
                     const firstDay = currentSessionDays[0]; 
@@ -389,8 +401,9 @@
 
             if (selectedDays.length !== 0) {
                 let customCheckedMonths = [];
-                monthsOrder.forEach(m => {
-                    if(m !== 2 && document.getElementById(`chk_custom_${m}`).checked) {
+                customUIMonths.forEach(m => {
+                    const chk = document.getElementById(`chk_custom_${m}`);
+                    if(chk && chk.checked) {
                         const val = document.getElementById(`input_custom_${m}`).value;
                         const customVal = (val === '' || isNaN(val)) ? 0 : parseInt(val);
                         if (customVal === 0) {
