@@ -109,7 +109,7 @@
 
     <script>
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
-        const VALID_PASSWORD = "8425"; // 암호 8425로 설정
+        // 보안 강화를 위해 클라이언트(HTML)에서 비밀번호 변수 노출을 완전히 제거했습니다.
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
         const customUIMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1];
         const engMonthNames = {
@@ -220,8 +220,8 @@
         async function saveToFirebase() {
             const passwordInput = document.getElementById('adminPassword').value;
             
-            if (passwordInput !== VALID_PASSWORD) {
-                alert('❌ 암호가 올바르지 않습니다. 수정 권한이 없습니다.');
+            if (!passwordInput.trim()) {
+                alert('🔒 암호를 입력해야 저장이 가능합니다.');
                 return;
             }
 
@@ -244,7 +244,7 @@
                 legal: document.getElementById('legalHolidays').value.split('\n').filter(v => v.trim()),
                 academy: document.getElementById('academyHolidays').value.split('\n').filter(v => v.trim()),
                 prep: document.getElementById('prepDays').value.split('\n').filter(v => v.trim()),
-                secretToken: "8425" // Firebase 보안 규칙 통과용 토큰값 일치
+                secretToken: passwordInput // 사용자가 입력한 패스워드를 그대로 실어 보냄
             };
             try {
                 const res = await fetch(targetUrl, { 
@@ -256,7 +256,7 @@
                 if(res.ok) {
                     alert(`✅ ${currentYear}년 학원 설정 및 월별 지정 회차 데이터가 안전하게 저장되었습니다.`);
                 } else {
-                    alert('❌ 저장 실패 (서버 보안 규칙에 의해 거부됨)');
+                    alert('❌ 저장 실패 (암호가 올바르지 않아 서버에서 거부되었습니다)');
                 }
             } catch(e) { alert('❌ 네트워크 오류로 인한 저장 실패'); }
         }
