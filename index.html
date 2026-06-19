@@ -20,7 +20,14 @@
 <body class="bg-gray-50 p-4">
 
     <div class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
-        <h2 class="text-xl font-bold mb-4 text-gray-800">⚙️ 학원 연간 스케줄러</h2>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+            <h2 class="text-xl font-bold text-gray-800">⚙️ 학원 연간 스케줄러</h2>
+            <div class="flex items-center gap-2">
+                <label for="adminPassword" class="text-xs font-bold text-gray-600">🔒 수정 암호:</label>
+                <input type="password" id="adminPassword" class="border p-1 text-xs rounded font-bold w-24 text-center border-gray-300 focus:outline-blue-500" placeholder="Password">
+            </div>
+        </div>
+        
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작 ~ 내년 2월 종료)</label>
@@ -102,6 +109,7 @@
 
     <script>
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
+        const VALID_PASSWORD = "8425"; // 클라이언트 1차 검증용 암호
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
         const customUIMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1];
         const engMonthNames = {
@@ -210,6 +218,13 @@
         }
 
         async function saveToFirebase() {
+            const passwordInput = document.getElementById('adminPassword').value;
+            
+            if (passwordInput !== VALID_PASSWORD) {
+                alert('❌ 암호가 올바르지 않습니다. 수정 권한이 없습니다.');
+                return;
+            }
+
             const currentYear = document.getElementById('baseYear').value;
             const targetUrl = `${DB_BASE_URL}/${currentYear}.json`;
             const selectedDays = Array.from(document.querySelectorAll('.day-check:checked')).map(cb => parseInt(cb.value));
@@ -228,12 +243,22 @@
                 customCounts: customCounts,
                 legal: document.getElementById('legalHolidays').value.split('\n').filter(v => v.trim()),
                 academy: document.getElementById('academyHolidays').value.split('\n').filter(v => v.trim()),
-                prep: document.getElementById('prepDays').value.split('\n').filter(v => v.trim())
+                prep: document.getElementById('prepDays').value.split('\n').filter(v => v.trim()),
+                secretToken: "8425" // Firebase DB 보안 규칙 검증용 데이터 추가
             };
             try {
-                await fetch(targetUrl, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                alert(`✅ ${currentYear}년 학원 설정 및 월별 지정 회차 데이터가 안전하게 저장되었습니다.`);
-            } catch(e) { alert('❌ 저장 실패'); }
+                const res = await fetch(targetUrl, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+                
+                if(res.ok) {
+                    alert(`✅ ${currentYear}년 학원 설정 및 월별 지정 회차 데이터가 안전하게 저장되었습니다.`);
+                } else {
+                    alert('❌ 저장 실패 (서버 보안 규칙에 의해 거부됨)');
+                }
+            } catch(e) { alert('❌ 네트워크 오류로 인한 저장 실패'); }
         }
 
         function parseHolidayLines(id, baseYear) {
@@ -532,7 +557,6 @@
                     const monthAttr = card.getAttribute("data-month");
                     const yearAttr = card.getAttribute("data-year");
                     
-                    // 선생님 인쇄 전용: 국문 타이틀 요소를 영문 타이틀(ex: March 2026)로 내용 직접 치환
                     const titleEl = card.querySelector(".inner-month-title");
                     if (titleEl) {
                         titleEl.innerText = `${engMonthNames[monthAttr]} ${yearAttr}`;
@@ -555,7 +579,6 @@
 
             const htmlContent = document.getElementById("printArea").innerHTML;
 
-            // 출력 완료(또는 팝업생성) 후 메인 화면을 위한 완벽한 국문 원상복구
             document.getElementById("lblLegal").innerText = "법정 공휴일";
             document.getElementById("lblAcademy").innerText = "학원 지정 휴일";
             document.getElementById("noClassNotice").style.display = "block";
@@ -575,7 +598,6 @@
             document.querySelectorAll(".monthly-holiday-list").forEach(el => el.style.display = "block");
             document.querySelectorAll(".teacher-due-date").forEach(el => el.style.display = "none");
             
-            // 메인 폼의 타이틀 이름들도 다시 국문(X년 X월)으로 원복
             document.querySelectorAll(".print-card").forEach(card => {
                 const monthAttr = card.getAttribute("data-month");
                 const yearAttr = card.getAttribute("data-year");
@@ -625,7 +647,6 @@
                 '.standard-banner, .teacher-banner { font-size: 10px !important; padding-top: 3px !important; padding-bottom: 3px !important; font-weight: 800 !important; height: 22px !important; box-sizing: border-box !important; } ' +
                 '.inner-month-title { font-size: 11px !important; font-weight: 800 !important; margin-bottom: 2px !important; } ' +
                 
-                // 선생님 모드일 때 국문 타이틀(.inner-month-title) 숨김 처리를 제거하고 영문으로 치환된 텍스트가 인쇄되도록 허용
                 (isTeacherMode ? '.inner-month-title { display: block !important; } ' : '') +
                 '.custom-no-days { background-color: transparent !important; border: none !important; color: transparent !important; } ' +
                 
@@ -645,7 +666,7 @@
                 '  const diffBanners = grid.querySelectorAll("[data-custom-diff=\'true\']");' +
                 '  diffBanners.forEach(b => b.classList.add("custom-diff-banner"));' +
                 '}' +
-                'setTimeout(function(){ window.print(); window.close(); }, 500);' +
+                setTimeout(function(){ window.print(); window.close(); }, 500);' +
                 '<\/script></body></html>';
                 
             printWindow.document.write(template);
