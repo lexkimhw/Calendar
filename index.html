@@ -15,6 +15,9 @@
         .bg-legal { background-color: #71717a !important; color: white !important; } 
         .bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; } 
         .bg-prep { background-color: #a1a1aa !important; color: white !important; } 
+        
+        /* 시작일 이전 날짜 비활성화 스타일 */
+        .before-start-date { color: #d1d5db !important; background-color: #f9fafb !important; text-decoration: line-through; }
     </style>
 </head>
 <body class="bg-gray-50 p-4">
@@ -28,13 +31,17 @@
             </div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
             <div>
-                <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 시작 ~ 내년 2월 종료)</label>
+                <label class="block text-xs font-bold mb-1">기준 연도 설정 (3월 ~ 내년 2월)</label>
                 <input type="number" id="baseYear" class="w-full border p-2 rounded font-bold" value="2026" onchange="handleYearChange()">
             </div>
+            <div>
+                <label class="block text-xs font-bold mb-1 text-blue-700">📅 별도 시작일 지정 (선택)</label>
+                <input type="date" id="startDateInput" class="w-full border p-2 rounded font-bold text-xs border-blue-400 bg-blue-50" onchange="calculateSchedule()">
+            </div>
             <div class="md:col-span-2">
-                <label class="block text-xs font-bold mb-1">수업 요일 지정 (1개 선택 시 4회, 2개 이상 선택 시 8회 자동 분할)</label>
+                <label class="block text-xs font-bold mb-1">수업 요일 지정 (1개: 4회, 2개 이상: 8회 분할)</label>
                 <div class="flex gap-4 pt-2">
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="1" id="chk_mon" onchange="calculateSchedule()"> 월</label>
                     <label class="cursor-pointer"><input type="checkbox" class="day-check" value="2" id="chk_tue" onchange="calculateSchedule()"> 화</label>
@@ -48,7 +55,7 @@
                     <input type="checkbox" id="teacherModeCheck" class="w-4 h-4 accent-blue-600"> 🧑‍🏫 선생님용 인쇄시 체크
                 </label>
                 <div class="flex gap-2">
-                    <button onclick="saveToFirebase()" class="w-1/2 bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 cursor-pointer">💾 입력 내용 저장</button>
+                    <button onclick="saveToFirebase()" class="w-1/2 bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 cursor-pointer">💾 저장</button>
                     <button onclick="printScheduler()" class="w-1/2 bg-emerald-600 text-white font-bold py-2 rounded shadow hover:bg-emerald-700 cursor-pointer">🖨️ 인 쇄</button>
                 </div>
             </div>
@@ -109,7 +116,6 @@
 
     <script>
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
-        // 보안 강화를 위해 클라이언트(HTML)에서 비밀번호 변수 노출을 완전히 제거했습니다.
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
         const customUIMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1];
         const engMonthNames = {
@@ -119,8 +125,17 @@
 
         window.onload = async () => {
             initMonthCustomUI();
+            resetStartDateInput();
             await loadFromFirebase();
         };
+
+        function resetStartDateInput() {
+            const baseYear = document.getElementById('baseYear').value;
+            const startDateInput = document.getElementById('startDateInput');
+            if (!startDateInput.value || !startDateInput.value.startsWith(baseYear)) {
+                startDateInput.value = `${baseYear}-03-01`;
+            }
+        }
 
         function initMonthCustomUI() {
             const container = document.getElementById('monthCustomContainer');
@@ -152,6 +167,7 @@
         }
 
         async function handleYearChange() {
+            resetStartDateInput();
             clearInputs();
             await loadFromFirebase();
         }
@@ -244,7 +260,7 @@
                 legal: document.getElementById('legalHolidays').value.split('\n').filter(v => v.trim()),
                 academy: document.getElementById('academyHolidays').value.split('\n').filter(v => v.trim()),
                 prep: document.getElementById('prepDays').value.split('\n').filter(v => v.trim()),
-                secretToken: passwordInput // 사용자가 입력한 패스워드를 그대로 실어 보냄
+                secretToken: passwordInput
             };
             try {
                 const res = await fetch(targetUrl, { 
@@ -333,10 +349,21 @@
             const academy = parseHolidayLines('academyHolidays', baseYear);
             const prep = parseHolidayLines('prepDays', baseYear);
 
-            let globalClassDays = [];
-            let startDate = new Date(baseYear, 2, 1); let endDate = new Date(baseYear + 1, 2, 0);
+            // 시작일 파싱
+            const startDateVal = document.getElementById('startDateInput').value;
+            let effectiveStartDate = new Date(baseYear, 2, 1); // 기본 3월 1일
+            if (startDateVal) {
+                const [sY, sM, sD] = startDateVal.split('-').map(Number);
+                effectiveStartDate = new Date(sY, sM - 1, sD);
+            }
 
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            let globalClassDays = [];
+            let fullStartDate = new Date(baseYear, 2, 1);
+            let endDate = new Date(baseYear + 1, 2, 0); // 내년 2월 말일
+
+            for (let d = new Date(fullStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                if (d < effectiveStartDate) continue; // 별도 지정한 시작일 이전의 요일은 계산에서 제외
+
                 const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curM_day = d.getDate();
                 const dKey = `${curY}-${String(curM).padStart(2,'0')}-${String(curM_day).padStart(2,'0')}`;
                 
@@ -502,14 +529,20 @@
                     if ((firstDayIdx + d - 1) % 7 === 0 && d !== 1) html += `</tr><tr>`;
 
                     let bgClass = "";
-                    if (legal.map[dKey]) bgClass = "bg-legal";
+                    const isBeforeStart = dateObj < effectiveStartDate;
+
+                    if (isBeforeStart) {
+                        bgClass = "before-start-date";
+                    } else if (legal.map[dKey]) bgClass = "bg-legal";
                     else if (academy.map[dKey]) bgClass = "bg-academy";
                     else if (prep.map[dKey]) bgClass = "bg-prep";
                     else if (dateStyleMap[dKey]) bgClass = dateStyleMap[dKey].colorClass;
 
                     let colorClass = "";
-                    if (dayOfWeek === 0) colorClass = "sun";
-                    else if (dayOfWeek === 6) colorClass = "sat";
+                    if (!isBeforeStart) {
+                        if (dayOfWeek === 0) colorClass = "sun";
+                        else if (dayOfWeek === 6) colorClass = "sat";
+                    }
 
                     html += `<td class="p-0.5"><div class="aspect-square flex items-center justify-center rounded-sm font-bold ${bgClass} ${colorClass}">${d}</div></td>`;
                 }
@@ -625,6 +658,7 @@
                 '.bg-legal { background-color: #71717a !important; color: white !important; } ' +
                 '.bg-academy { background-color: #fde047 !important; color: black !important; border: 1px solid #eab308 !important; } ' +
                 '.bg-prep { background-color: #a1a1aa !important; color: white !important; } ' +
+                '.before-start-date { color: #d1d5db !important; background-color: #f9fafb !important; text-decoration: line-through; } ' +
                 'th { font-weight: bold !important; color: #4b5563 !important; padding-bottom: 2px !important; } ' +
                 
                 '.custom-diff-banner { border: 2px dashed #dc2626 !important; border-radius: 4px !important; } ' +
