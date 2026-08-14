@@ -116,7 +116,7 @@
 
     <script>
         const DB_BASE_URL = "https://calendar-75c98-default-rtdb.asia-southeast1.firebasedatabase.app/schedules";
-        const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
+        const defaultMonthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
         const customUIMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1];
         const engMonthNames = {
             1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
@@ -362,7 +362,7 @@
             let endDate = new Date(baseYear + 1, 2, 0); // 내년 2월 말일
 
             for (let d = new Date(fullStartDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                if (d < effectiveStartDate) continue; // 별도 지정한 시작일 이전의 요일은 계산에서 제외
+                if (d < effectiveStartDate) continue; // 지정 시작일 이전 요일 제외
 
                 const curY = d.getFullYear(); const curM = d.getMonth() + 1; const curM_day = d.getDate();
                 const dKey = `${curY}-${String(curM).padStart(2,'0')}-${String(curM_day).padStart(2,'0')}`;
@@ -376,10 +376,25 @@
             const dateStyleMap = {}; 
             const monthBannerInfo = {}; 
 
+            // 시작 달 기준으로 월 순회 순서(monthsOrder)를 동적으로 재배열
+            const startMonth = effectiveStartDate.getMonth() + 1;
+            let dynamicMonthsOrder = [];
+            const startIndex = defaultMonthsOrder.indexOf(startMonth);
+
+            if (startIndex !== -1) {
+                dynamicMonthsOrder = [
+                    ...defaultMonthsOrder.slice(startIndex),
+                    ...defaultMonthsOrder.slice(0, startIndex)
+                ];
+            } else {
+                dynamicMonthsOrder = [...defaultMonthsOrder];
+            }
+
             let dayIdx = 0;
             let activeSessionOrder = 0; 
 
-            monthsOrder.forEach((currentMonth, mOrderIdx) => {
+            // 동적으로 재배열된 월 순서대로 회차 계산 진행
+            dynamicMonthsOrder.forEach((currentMonth) => {
                 const chk = document.getElementById(`chk_custom_${currentMonth}`);
                 const isCustom = chk ? chk.checked : false;
                 
